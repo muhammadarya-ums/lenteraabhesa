@@ -2,49 +2,91 @@
 
 import React, { useState } from 'react'
 import { BookOpen, History, Gamepad2 } from 'lucide-react'
-import Image from "next/image";
+import Image from "next/image"
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
+// 1. COMPONENT: Navbar (Sudah Fix Navigasi)
 const Navbar = () => {
-  const [activeMenu, setActiveMenu] = useState('Beranda')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+
+  // Mapping menu sesuai dengan struktur folder di image_b368c4.png
+  const menuItems = [
+    { name: 'Beranda', path: '/' },
+    { name: 'Kamus', path: '/kamus' },
+    { name: 'Sejarah', path: '/sejarah' },
+    { name: 'Game🚀', path: '/game' },
+    { name: 'Tentang Kami', path: '/tentang-kami' },
+  ]
 
   return (
-  <nav className="w-full flex justify-between items-center py-4 px-50 bg-white border-b border-gray-200">
-    <div className="flex items-center">
-      <Image
-        src="/logo.png"
-        alt="Lentera Abhesa"
-        width={120}
-        height={70}
-        priority
-      />
-    </div>
-  
+    <nav className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        {/* Logo */}
+        <div className="flex items-center">
+          <Link href="/">
+            <Image src="/logo.png" alt="Lentera Abhesa" width={100} height={50} priority className="cursor-pointer" />
+          </Link>
+        </div>
 
-      {/* Center Navigation */}
-      <div className="hidden md:flex gap-6">
-        {['Beranda', 'Kamus', 'Sejarah', 'Game', 'Tentang Kami'].map((item) => (
-          <button
-            key={item}
-            onClick={() => setActiveMenu(item)}
-            className={`text-sm font-semibold transition-colors ${
-              activeMenu === item
-                ? 'text-[#005C43]'
-                : 'text-gray-700 hover:text-[#005C43]'
-            }`}
-          >
-            {item}
-          </button>
-        ))}
+        {/* Desktop Menu */}
+        <div className="hidden md:flex gap-6">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.path
+            return (
+              <Link 
+                key={item.name} 
+                href={item.path} 
+                className={`text-sm font-semibold transition-colors ${
+                  isActive ? 'text-[#005C43]' : 'text-gray-700 hover:text-[#005C43]'
+                }`}
+              >
+                {item.name}
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Right Button (Desktop Only) */}
+        <button className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity">
+          Dukung Kami
+        </button>
+
+        {/* Hamburger Icon (Mobile) */}
+        <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? '✕' : '☰'}
+        </button>
       </div>
 
-      {/* Right Button */}
-      <button className="bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity">
-        Dukung Kami
-      </button>
+      {/* Mobile Dropdown Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.path
+            return (
+              <Link 
+                key={item.name} 
+                href={item.path} 
+                onClick={() => setIsMobileMenuOpen(false)} 
+                className={`text-left font-semibold transition-colors ${
+                  isActive ? 'text-[#005C43]' : 'text-gray-700'
+                }`}
+              >
+                {item.name}
+              </Link>
+            )
+          })}
+          <button className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold">
+            Dukung Kami
+          </button>
+        </div>
+      )}
     </nav>
   )
 }
 
+// 2. COMPONENT: Hero Section
 const HeroSection = () => (
   <section className="w-full px-8 py-16 bg-white">
     <div className="max-w-7xl mx-auto">
@@ -56,10 +98,10 @@ const HeroSection = () => (
           </h1>
           
           <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-2">
-            Platform digital untuk melestarikan dan mengembangkan bahasa lokal.
+            Platform digital untuk melestarikan bahasa dan sastra
           </p>
           <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-10">
-            Bersama-sama menjaga warisan budaya melalui teknologi modern yang terjangkau.
+            Pulau Bawean, memahami dan bangga menjadi bagian dari Pulau Bawean.
           </p>
 
           {/* Statistics */}
@@ -70,139 +112,197 @@ const HeroSection = () => (
             </div>
             <div className="flex flex-col items-start">
               <p className="text-4xl font-extrabold text-[#005C43]">11</p>
-              <p className="text-sm text-gray-700 mt-1">Abjad Sejarah</p>
+              <p className="text-sm text-gray-700 mt-1">Artikel Sejarah</p>
             </div>
             <div className="flex flex-col items-start">
               <p className="text-4xl font-extrabold text-[#005C43]">2,009</p>
-              <p className="text-sm text-gray-700 mt-1">Total Pengucapan</p>
+              <p className="text-sm text-gray-700 mt-1">Total Pengunjung</p>
             </div>
           </div>
         </div>
 
         {/* Right Illustration */}
-        <div className="flex items-center justify-center h-83 rounded-3xl bg-[#F0F5F3]">
+        <div className="flex items-center justify-center h-83 rounded-3xl">
           <Image
-        src="/image2.png"
-        alt=""
-        width={350}
-        height={70}
-        priority
-      />
+            src="/image2.png"
+            alt=""
+            width={340}
+            height={70}
+            priority
+          />
         </div>
       </div>
     </div>
   </section>
 )
 
+// 3. COMPONENT: Features Section
 const FeaturesSection = () => (
   <section className="w-full px-8 py-16 bg-white">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Kamus Digital */}
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#F0F5F3] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#E0EAE6] flex items-center justify-center mb-4">
-            <BookOpen className="w-8 h-8 text-[#005C43]" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Kamus Digital</h3>
-          <p className="text-sm text-gray-700">Cari dan pelajari ribuan kosakata lokal dengan mudah</p>
-        </div>
+        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
+  {/* Wadah Lingkaran Gambar */}
+  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+    <Image 
+      src="/book.png" 
+      alt="Kamus Digital" 
+      width={32} 
+      height={32} 
+      className="object-contain"
+    />
+  </div>
+  
+  {/* Judul & Deskripsi */}
+  <h3 className="text-xl font-bold text-[#005C43] mb-2">Kamus Digital</h3>
+  <p className="text-sm text-gray-700">Cari dan pelajari kosakata bawean</p>
+</div>
 
         {/* Sejarah */}
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#F0F5F3] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#E0EAE6] flex items-center justify-center mb-4">
-            <History className="w-8 h-8 text-[#005C43]" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Sejarah</h3>
-          <p className="text-sm text-gray-700">Telusuri asal-usul dan perkembangan bahasa lokal</p>
-        </div>
+        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
+  {/* Wadah Lingkaran Gambar */}
+  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+    <Image 
+      src="/archive-book.png" 
+      alt="Sejarah" 
+      width={32} 
+      height={32} 
+      className="object-contain"
+    />
+  </div>
+  
+  {/* Judul & Deskripsi */}
+  <h3 className="text-xl font-bold text-[#005C43] mb-2">Sejarah</h3>
+  <p className="text-sm text-gray-700">Telusuri asal-usul dan  ragam halus abhesa</p>
+</div>
+{/* Seksologi Bahasa */}
+        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
+  {/* Wadah Lingkaran Gambar */}
+  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+    <Image 
+      src="/teacher.png" 
+      alt="Belajar Bahasa" 
+      width={32} 
+      height={32} 
+      className="object-contain"
+    />
+  </div>
+  
+  {/* Judul & Deskripsi */}
+  <h3 className="text-xl font-bold text-[#005C43] mb-2">Belajar Bahasa</h3>
+  <p className="text-sm text-gray-700">Belajar seru dan interaktif bahasa halus</p>
+</div>
 
         {/* Game */}
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#F0F5F3] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#E0EAE6] flex items-center justify-center mb-4">
-            <Gamepad2 className="w-8 h-8 text-[#005C43]" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Game</h3>
-          <p className="text-sm text-gray-700">Belajar sambil bermain dengan mini-game edukatif</p>
-        </div>
-
-        {/* Seksologi Bahasa */}
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#F0F5F3] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#E0EAE6] flex items-center justify-center mb-4">
-            <span className="text-[#005C43] font-bold text-2xl">Σ</span>
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Seksologi Bahasa</h3>
-          <p className="text-sm text-gray-700">Memahami aturan tata bahasa dan penggunaannya</p>
-        </div>
+        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
+  {/* Wadah Lingkaran Gambar */}
+  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+    <Image 
+      src="/game1.png" 
+      alt="Game" 
+      width={32} 
+      height={32} 
+      className="object-contain"
+    />
+  </div>
+  
+  {/* Judul & Deskripsi */}
+  <h3 className="text-xl font-bold text-[#005C43] mb-2">Game</h3>
+  <p className="text-sm text-gray-700">Selesaikan semua tantangan seru</p>
+</div>
       </div>
     </div>
   </section>
 )
 
+// 4. COMPONENT: Why Section
 const WhySection = () => (
   <section className="w-full px-8 py-16 bg-white">
     <div className="max-w-7xl mx-auto">
-      <h2 className="text-5xl font-extrabold text-[#005C43] mb-4 text-center">
-        Mengapa Lentera Abhesa?
-      </h2>
-      <p className="text-center text-gray-700 mb-12 max-w-2xl mx-auto text-lg">
-        Kami menyediakan platform terlengkap untuk melestarikan bahasa lokal dengan teknologi modern dan pendekatan yang inklusif
-      </p>
+      
+      {/* 1. Bagian Header (Judul & Deskripsi kini sudah terpisah dengan benar) */}
+      <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-12">
+        {/* Sisi Kiri */}
+        <h2 className="text-4xl md:text-5xl font-extrabold text-[#005C43] text-left max-w-sm leading-tight">
+          Mengapa Lentera Abhesa?
+        </h2>
+        {/* Sisi Kanan */}
+        <p className="text-gray-700 text-lg text-left max-w-xl leading-relaxed md:pt-2">
+          Terbuka untuk semua pelajar, masyarakat dan semua kalangan dimanapun berada untuk belajar dan melestarikan ragam halus abhesa Bawean
+        </p>
+      </div>
 
-      {/* Bento Grid: grid-cols-1 md:grid-cols-4 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Item 1: Melestarikan Bahasa - md:col-span-2 */}
-        <div className="md:col-span-2 rounded-2xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-between min-h-[280px]">
-          <div>
+      {/* 2. Bento Grid (Menggunakan struktur kolom agar mendapatkan efek naik-turun) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
+        
+        {/* KOLOM 1: Mengambil 2 Kolom (Kiri) */}
+        <div className="md:col-span-2 flex flex-col gap-4">
+          {/* Kartu: Melestarikan Bahasa */}
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-[240px] flex flex-col justify-start">
             <h3 className="text-3xl font-extrabold mb-4">Melestarikan Bahasa</h3>
-            <p className="text-base leading-relaxed">
-              Menangani abhasa halus melalui teknologi digital untuk menjangkau lebih banyak generasi muda
+            <p className="text-base text-gray-100 leading-relaxed">
+              Menangani bahasa halus melalui teknologi digital untuk menjangkau lebih banyak generasi muda
+            </p>
+          </div>
+          {/* Kartu: Foto Fauna */}
+          <div className="rounded-3xl overflow-hidden bg-gray-200 h-[320px] relative">
+            <Image 
+              src="/rusa.png" 
+              alt="Foto Fauna Bawean"
+              fill
+              className="object-cover"
+            />
+          </div>
+        </div>
+
+        {/* KOLOM 2: Mengambil 1 Kolom (Tengah) */}
+        <div className="md:col-span-1 flex flex-col gap-4">
+          {/* Kartu: Foto Rumah */}
+          <div className="rounded-3xl overflow-hidden bg-gray-200 h-[340px] relative">
+            <Image 
+              src="/rumah.png" 
+              alt="Foto Rumah Bawean"
+              fill
+              className="object-cover"
+              priority 
+            />
+          </div>
+          {/* Kartu: Edukasi Interaktif */}
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-[220px] flex flex-col justify-start">
+            <h3 className="text-2xl font-extrabold mb-3">Edukasi Interaktif</h3>
+            <p className="text-sm text-gray-100 leading-relaxed">
+              Sediakan akses mudah dan menyenangkan untuk pembelajaran bahasa lokal
             </p>
           </div>
         </div>
 
-        {/* Item 2: Foto Rumah - md:col-span-1 */}
-        <div className="md:col-span-1 rounded-2xl overflow-hidden bg-gray-300 h-48 flex items-center justify-center">
-          <p className="text-gray-600 font-medium">Foto Rumah</p>
-        </div>
-
-        {/* Item 3: Budaya Pulau Bawean - md:col-span-1 md:row-span-2 */}
-        <div className="md:col-span-1 md:row-span-2 rounded-2xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-between min-h-[280px]">
-          <div>
-            <h3 className="text-2xl font-extrabold mb-3">Budaya Pulau Bawean</h3>
-            <p className="text-base leading-relaxed">
+        {/* KOLOM 3: Mengambil 1 Kolom Full Tinggi (Kanan) */}
+        <div className="md:col-span-1 flex flex-col">
+          {/* Kartu: Budaya Pulau Bawean */}
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-start h-full min-h-[300px]">
+            <h3 className="text-2xl font-extrabold mb-4">Budaya Pulau Bawean</h3>
+            <p className="text-base text-gray-100 leading-relaxed">
               Menjaga tradisi lokal dengan dokumentasi budaya yang komprehensif
             </p>
           </div>
         </div>
 
-        {/* Item 4: Foto Rusa - md:col-span-2 */}
-        <div className="md:col-span-2 rounded-2xl overflow-hidden bg-gray-300 h-48 flex items-center justify-center">
-          <p className="text-gray-600 font-medium">Foto Fauna</p>
-        </div>
-
-        {/* Item 5: Edukasi Interaktif - md:col-span-1 */}
-        <div className="md:col-span-1 rounded-2xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-between min-h-[148px]">
-          <div>
-            <h3 className="text-2xl font-extrabold mb-3">Edukasi Interaktif</h3>
-            <p className="text-sm leading-relaxed">
-              Sediakan akses mudah dan menyenangkan untuk pembelajaran bahasa lokal
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   </section>
 )
 
+// 5. COMPONENT: CTA Section
 const CTASection = () => (
   <section className="w-full px-8 py-16 bg-white">
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <div className="bg-linear-to-b from-[#002b1f] to-[#005C43] rounded-3xl text-white p-12 text-center">
         <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
           Dukung Pelestarian Abhesa Halus Bawean
         </h2>
         <p className="text-base md:text-lg leading-relaxed mb-10 max-w-3xl mx-auto">
-          Bergabunglah dengan kami dalam misi melestarikan warisan bahasa dan budaya Indonesia. Setiap kontribusi Anda membantu generasi mendatang memahami akar identitas mereka.
+          Bersama kita jaga, lestarikan dan contohkan bahasa dan sastra bawean untuk generasi akan datang. Punya usulan kata atau menemukan arti yang berbeda? yuk, beritahu kami!
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -218,38 +318,30 @@ const CTASection = () => (
   </section>
 )
 
+// 6. COMPONENT: Footer (Sudah Fix Navigasi)
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-        {/* Column 1: Logo & Description */}
         <div className="flex flex-col">
           <div className="flex items-center gap-2 mb-4">
-            <Image
-        src="/logo.png"
-        alt="Lentera Abhesa"
-        width={120}
-        height={70}
-        priority
-      />
+            <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
           </div>
           <p className="text-sm text-gray-700 leading-relaxed">
-            Platform digital untuk melestarikan bahasa lokal dan budaya Indonesia
+           Platform digital untuk melestarikan bahasa dan sastra Bawean
           </p>
         </div>
 
-        {/* Column 2: Navigasi */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="/app" className="hover:text-[#005C43] transition-colors">Beranda</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Kamus</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Sejarah</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Game</a></li>
+          <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
+            <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
+            <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
+            <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
+            <li><Link href="/game" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
           </ul>
         </div>
 
-        {/* Column 3: Media Sosial */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -259,7 +351,6 @@ const Footer = () => (
           </ul>
         </div>
 
-        {/* Column 4: Kontak */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -269,7 +360,6 @@ const Footer = () => (
         </div>
       </div>
 
-      {/* Copyright */}
       <div className="border-t border-gray-300 pt-6 text-center">
         <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
       </div>
@@ -277,6 +367,7 @@ const Footer = () => (
   </footer>
 )
 
+// MAIN EXPORT
 export default function Page() {
   return (
     <main className="w-full bg-white">
