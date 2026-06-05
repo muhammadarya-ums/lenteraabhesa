@@ -6,12 +6,13 @@ import { useParams, usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import Image from "next/image"
 
-// 1. COMPONENT: Navbar (Sinkronisasi Navigasi & Active State Dinamis)
+// ==========================================
+// 1. COMPONENT: Navbar (Sinkronisasi Navigasi)
+// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
-  // Sesuai dengan tatanan folder aplikasi
   const menuItems = [
     { name: 'Beranda', path: '/' },
     { name: 'Kamus', path: '/kamus' },
@@ -33,7 +34,6 @@ const Navbar = () => {
         {/* Desktop Menu */}
         <div className="hidden md:flex gap-6">
           {menuItems.map((item) => {
-            // Mencegah "/" mencocokkan semua rute, dan memastikan rute anak seperti /sejarah/[slug] tetap mengaktifkan menu Sejarah
             const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
             return (
               <Link 
@@ -87,10 +87,13 @@ const Navbar = () => {
   )
 }
 
-// 2. DATA: Detail Artikel Sejarah
+// ==========================================
+// 2. DATA SOURCE: Detail Artikel Sejarah (Ditambah properti imageUrl)
+// ==========================================
 const articleData: Record<string, {
   title: string
   description: string
+  imageUrl: string // Menampung path foto secara dinamis
   content: {
     section: string
     text: string
@@ -100,6 +103,7 @@ const articleData: Record<string, {
   'perkembangan-bahasa-bawean': {
     title: 'Perkembangan bahasa Bawean',
     description: 'Bahasa Bawean adalah bahasa nilo-Autik yang berkaitan dengan bahasa Maduara. Perkembangannya dipengaruhi oleh percampuran dari berbagai budaya dan tradisi merantau masyarakatnya ke negeri-negeri seperti Malaysia dan Singapura.',
+    imageUrl: '/bahasa.png', 
     content: [
       {
         section: '1. Karakteristik & Pembentukan Bahasa',
@@ -133,6 +137,7 @@ const articleData: Record<string, {
   'asai-usul-pulau-bawean': {
     title: 'Asai-usul Pulau Bawean',
     description: 'Pulau Bawean adalah pulau terpencil yang mencuri perhatian dari berbagai sumber sejarah. Disebutkan dalam berbagai catatan historis sebagai bagian penting dari kerajaan maritim Nusantara.',
+    imageUrl: '/asal-usul.png',
     content: [
       {
         section: '1. Asal-usul Nama Bawean',
@@ -148,6 +153,7 @@ const articleData: Record<string, {
   'budaya-bawean': {
     title: 'Budaya Bawean',
     description: 'Budaya Bawean merepresentasikan perpaduan unik dari berbagai tradisi yang telah bercampur selama berabad-abad.',
+    imageUrl: '/budaya.png',
     content: [
       {
         section: '1. Tradisi & Adat Istiadat',
@@ -162,7 +168,9 @@ const articleData: Record<string, {
   },
 }
 
+// ==========================================
 // 3. COMPONENT: Breadcrumb
+// ==========================================
 const Breadcrumb = ({ slug }: { slug: string }) => {
   const article = articleData[slug]
   return (
@@ -176,12 +184,13 @@ const Breadcrumb = ({ slug }: { slug: string }) => {
   )
 }
 
-// 4. COMPONENT: Footer (Sinkronisasi Navigasi)
+// ==========================================
+// 4. COMPONENT: Footer
+// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-12">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-        {/* Column 1: Logo & Description */}
         <div className="flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
@@ -191,7 +200,6 @@ const Footer = () => (
           </p>
         </div>
 
-        {/* Column 2: Navigasi */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
           <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
@@ -202,7 +210,6 @@ const Footer = () => (
           </ul>
         </div>
 
-        {/* Column 3: Media Sosial */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -212,7 +219,6 @@ const Footer = () => (
           </ul>
         </div>
 
-        {/* Column 4: Kontak */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -222,7 +228,6 @@ const Footer = () => (
         </div>
       </div>
 
-      {/* Copyright */}
       <div className="border-t border-gray-300 pt-6 text-center">
         <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
       </div>
@@ -230,7 +235,9 @@ const Footer = () => (
   </footer>
 )
 
+// ==========================================
 // 5. MAIN DEFAULT EXPORT: Halaman Detail Artikel
+// ==========================================
 export default function ArticleDetailPage() {
   const params = useParams()
   const slug = params.slug as string
@@ -270,14 +277,26 @@ export default function ArticleDetailPage() {
           </div>
         </section>
 
-        {/* Banner Image */}
+        {/* ==========================================================
+            BANNER IMAGE BLOCK (FIXED: Sekarang otomatis meload foto dinamis)
+           ========================================================== */}
         <section className="px-8 py-8">
           <div className="max-w-4xl mx-auto">
-            <div className="w-full h-64 rounded-2xl bg-gradient-to-br from-blue-300 to-blue-400 flex items-center justify-center overflow-hidden">
-              <span className="text-gray-400 font-medium text-lg">BAWEAN</span>
+            <div className="w-full h-64 md:h-[400px] rounded-2xl bg-gray-50 overflow-hidden relative border border-gray-100 shadow-sm">
+              <Image 
+                src={article.imageUrl} 
+                alt={article.title}
+                fill
+                className="object-cover"
+                sizes="(max-w-4xl) 100vw, 896px"
+                priority
+              />
             </div>
           </div>
         </section>
+        {/* ==========================================================
+            END OF BANNER IMAGE BLOCK
+           ========================================================== */}
 
         {/* Article Content */}
         <section className="px-8 py-12">

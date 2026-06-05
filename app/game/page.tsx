@@ -5,7 +5,9 @@ import Link from 'next/link'
 import Image from "next/image"
 import { usePathname } from 'next/navigation'
 
-// 1. COMPONENT: Navbar (Sinkronisasi Navigasi & Active State Dinamis)
+// ==========================================
+// 1. COMPONENT: Navbar (Sinkronisasi Navigasi)
+// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -84,30 +86,67 @@ const Navbar = () => {
   )
 }
 
-// 2. COMPONENT: Game Card
-const GameCard = ({ title, description, icon: Icon, href }: { title: string; description: string; icon: React.ComponentType<{ className?: string }>; href: string }) => (
-  <Link href={href}>
-    <div className="cursor-pointer rounded-3xl bg-linear-to-br from-[#F0F5F3] to-[#E8F0ED] p-8 text-center hover:shadow-lg transition-shadow duration-300 h-full flex flex-col justify-between items-center">
-      <div>
-        <div className="flex justify-center mb-4">
-          <Icon />
-        </div>
-        <h3 className="text-2xl font-bold text-[#00664B] mb-2">{title}</h3>
-        <p className="text-gray-700 text-sm leading-relaxed mb-6">{description}</p>
-      </div>
-      <button className="bg-[#00664B] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity mt-auto">
-        Ayo Mulai →
-      </button>
-    </div>
-  </Link>
-)
+// ==========================================
+// 2. COMPONENT: Game Card (Sesuai Desain Figma)
+// ==========================================
+interface GameCardProps {
+  title: string
+  description: string
+  imageSrc: string // Prop baru untuk file foto game
+  href: string
+  isAvailable?: boolean // Kondisi game aktif atau Coming Soon
+}
 
-// 3. COMPONENT: Footer (Sinkronisasi Navigasi)
+const GameCard = ({ title, description, imageSrc, href, isAvailable = true }: GameCardProps) => {
+  const CardContent = (
+    <div className="rounded-[32px] bg-[#EBF2EE] p-8 text-center h-full flex flex-col justify-between items-center transition-all duration-300 hover:shadow-md">
+      {/* Bagian Atas: Judul & Deskripsi */}
+      <div className="w-full flex flex-col items-center">
+        <h3 className="text-3xl font-bold text-[#005C43] mb-3">{title}</h3>
+        <p className="text-gray-700 text-sm leading-relaxed max-w-[260px] mb-6">{description}</p>
+      </div>
+
+      {/* Bagian Tengah: Foto Ilustrasi Game */}
+      <div className="w-full h-48 relative mb-8 flex items-center justify-center">
+        <Image 
+          src={imageSrc} 
+          alt={title} 
+          fill
+          className="object-contain"
+          sizes="(max-w-md) 100vw, 300px"
+        />
+      </div>
+
+      {/* Bagian Bawah: Tombol Status */}
+      {isAvailable ? (
+        <button className="w-full bg-[#005C43] text-white rounded-full py-3.5 font-bold text-base hover:opacity-95 transition-opacity">
+          Ayo Main →
+        </button>
+      ) : (
+        <button disabled className="w-full bg-[#F1F3F2] text-gray-400 rounded-full py-3.5 font-bold text-sm tracking-wider uppercase cursor-not-allowed">
+          COMING SOON
+        </button>
+      )}
+    </div>
+  )
+
+  // Jika game tersedia maka bisa di-klik link-nya, jika tidak maka matikan link-nya
+  return isAvailable ? (
+    <Link href={href} className="block h-full">
+      {CardContent}
+    </Link>
+  ) : (
+    <div className="h-full">{CardContent}</div>
+  )
+}
+
+// ==========================================
+// 3. COMPONENT: Footer
+// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-12">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-        {/* Column 1: Logo & Description */}
         <div className="flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
@@ -117,7 +156,6 @@ const Footer = () => (
           </p>
         </div>
 
-        {/* Column 2: Navigasi */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
           <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
@@ -128,7 +166,6 @@ const Footer = () => (
           </ul>
         </div>
 
-        {/* Column 3: Media Sosial */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -138,7 +175,6 @@ const Footer = () => (
           </ul>
         </div>
 
-        {/* Column 4: Kontak */}
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
           <ul className="space-y-2 text-sm text-gray-700">
@@ -148,7 +184,6 @@ const Footer = () => (
         </div>
       </div>
 
-      {/* Copyright */}
       <div className="border-t border-gray-300 pt-6 text-center">
         <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
       </div>
@@ -156,7 +191,9 @@ const Footer = () => (
   </footer>
 )
 
+// ==========================================
 // 4. MAIN DEFAULT EXPORT: Halaman Utama Game
+// ==========================================
 export default function GamePage() {
   return (
     <main className="w-full min-h-screen bg-white flex flex-col justify-between">
@@ -166,45 +203,41 @@ export default function GamePage() {
 
         {/* Content */}
         <div className="max-w-7xl mx-auto px-8 py-16">
-          <h1 className="text-5xl font-extrabold text-[#00664B] mb-2">Game 🎮</h1>
-          <p className="text-gray-700 text-lg mb-12">Bermain sambil belajar, selesaikan semua tantangan seru</p>
+          {/* Header menyontek copywriting persis di image_9b3e14.png */}
+          <h1 className="text-5xl font-extrabold text-[#005C43] mb-3 flex items-center gap-2">
+            Game 🚀
+          </h1>
+          <p className="text-gray-700 text-lg mb-12">
+            Bermain sambil belajar! selesaikan semua tantangan seru
+          </p>
 
           {/* Game Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Tebak Gambar */}
+            {/* 1. Tebak Gambar (Aktif) */}
             <GameCard
               title="Tebak Gambar"
-              description="Lihat gambar dan tebak bahasa Bawean berdasarkan gambar yang muncul"
-              icon={() => (
-                <div className="w-20 h-20 rounded-full bg-[#E8F0ED] flex items-center justify-center">
-                  <span className="text-4xl">🦌</span>
-                </div>
-              )}
+              description="Lihat gambar dan tebak bahasa baweannya"
+              imageSrc="/tebakgambar.png"
               href="/game/tebak-gambar"
+              isAvailable={true}
             />
 
-            {/* Tebak Kata */}
+            {/* 2. Tebak Kata (Coming Soon) */}
             <GameCard
               title="Tebak Kata"
-              description="Tebak arti kata bahasa Bawean dengan tepat dan kumpulkan poinmu"
-              icon={() => (
-                <div className="w-20 h-20 rounded-full bg-[#E8F0ED] flex items-center justify-center">
-                  <span className="text-4xl">📝</span>
-                </div>
-              )}
+              description="Tebak arti kata bahasa Bawean dengan tepat"
+              imageSrc="/tebakkata.png" // Taruh file fotomu di folder public/game-tebak-kata.png
               href="/game/tebak-kata"
+              isAvailable={false}
             />
 
-            {/* Susun Kata */}
+            {/* 3. Susun Kata (Coming Soon) */}
             <GameCard
               title="Susun Kata"
-              description="Susun huruf acak menjadi kosakata bahasa Bawean yang benar"
-              icon={() => (
-                <div className="w-20 h-20 rounded-full bg-[#E8F0ED] flex items-center justify-center">
-                  <span className="text-4xl">🔤</span>
-                </div>
-              )}
+              description="Susun huruf acak menjadi kata bahas Bawean"
+              imageSrc="/susunkata.png" // Taruh file fotomu di folder public/game-susun-kata.png
               href="/game/susun-kata"
+              isAvailable={false}
             />
           </div>
         </div>
