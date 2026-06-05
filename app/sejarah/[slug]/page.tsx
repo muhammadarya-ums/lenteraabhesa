@@ -50,9 +50,12 @@ const Navbar = () => {
         </div>
 
         {/* Right Button (Desktop Only) */}
-        <button className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity">
-          Dukung Kami
-        </button>
+        <Link 
+  href="/dukungkami" 
+  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
+>
+  Dukung Kami
+</Link>
 
         {/* Hamburger Icon (Mobile) */}
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -78,9 +81,12 @@ const Navbar = () => {
               </Link>
             )
           })}
-          <button className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold">
-            Dukung Kami
-          </button>
+          <Link 
+  href="/dukungkami" 
+  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
+>
+  Dukung Kami
+</Link>
         </div>
       )}
     </nav>

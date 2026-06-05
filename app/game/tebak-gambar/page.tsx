@@ -92,9 +92,12 @@ const Navbar = () => {
               </Link>
             )
           })}
-          <button className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold">
-            Dukung Kami
-          </button>
+          <Link 
+  href="/dukungkami" 
+  className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+>
+  Dukung Kami
+</Link>
         </div>
       )}
     </nav>
