@@ -20,11 +20,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Lentera Abhesa - Menjaga Bahasa, Merawat Identitas',
     description: 'Platform digital untuk melestarikan bahasa dan budaya lokal Indonesia',
-    url: 'https://lenteraabhesa.com',
+    url: 'https://lenteraabhesa.vercel.app',
     siteName: 'Lentera Abhesa',
     images: [
       {
-        url: 'https://lenteraabhesa.com/icon.png', // Harus URL absolut/lengkap agar dibaca WhatsApp
+        url: 'https://lenteraabhesa.vercel.app/icon.png', // Harus URL absolut/lengkap agar dibaca WhatsApp
         width: 1200,
         height: 630,
         alt: 'Lentera Abhesa App Logo',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Lentera Abhesa - Menjaga Bahasa, Merawat Identitas',
     description: 'Platform digital untuk melestarikan bahasa dan budaya lokal Indonesia',
-    images: ['https://lenteraabhesa.com/icon.png'],
+    images: ['https://lenteraabhesa.vercel.app/icon.png'],
   },
 }
 
