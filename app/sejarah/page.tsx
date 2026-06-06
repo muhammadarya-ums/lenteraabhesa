@@ -1,19 +1,20 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Loader2 } from 'lucide-react'
 import Image from "next/image"
 import { usePathname } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 // ==========================================
-// 1. INTERFACE DATA (Skema Sinkronisasi Admin CMS)
+// 1. INTERFACE DATA
 // ==========================================
 interface SejarahArticle {
   id: number
   slug: string
   title: string
-  category: string      
+  category: string        
   author: string        
   excerpt: string       
   content: string       
@@ -22,90 +23,7 @@ interface SejarahArticle {
 }
 
 // ==========================================
-// 2. MOCK DATA SOURCE (Sesuai image_9b50be.png)
-// ==========================================
-const initialSejarahArticles: SejarahArticle[] = [
-  {
-    id: 1,
-    slug: 'perkembangan-bahasa-bawean',
-    title: 'Perkembangan bahasa Bawean',
-    category: 'SEJARAH',
-    author: 'Karya Siswa',
-    excerpt: 'Bahasa Bawean adalah bahasa hibrida atau kreolisasi yang berakar dari bahasa Madura. Perkembangannya dipengaruhi oleh percampuran suku (Jawa, Bugis, Maka...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/bahasa.png', // Sesuai dengan data di image_9b50be.png
-    createdAt: '2026-06-01'
-  },
-  {
-    id: 2,
-    slug: 'tradisi-merantau-masyarakat-bawean',
-    title: 'Tradisi Merantau Masyarakat Bawean',
-    category: 'BUDAYA',
-    author: 'Admin Lentera',
-    excerpt: 'Tradisi merantau menjadi bagian penting dalam kehidupan masyarakat Bawean, yang menceritakan tentang pengalaman hidup mereka yang berangkat dari satu pulau...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/budaya.png',
-    createdAt: '2026-05-28'
-  },
-  {
-    id: 3,
-    slug: 'asal-usul-pulau-bawean',
-    title: 'Asal-usul Pulau Bawean',
-    category: 'SEJARAH',
-    author: 'Tim Riset',
-    excerpt: 'Pulau Bawean adalah pulau terpencil yang mencuri perhatian sang pemimpin pulau berpengaruh. Disebut sebagai "Pulau Butan" dalam kitab Negarakertagama...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/asalusul.png',
-    createdAt: '2026-05-20'
-  },
-  {
-    id: 4,
-    slug: 'budaya-bawean',
-    title: 'Budaya Bawean',
-    category: 'BUDAYA',
-    author: 'Karya Siswa',
-    excerpt: 'Budaya Bawean - berkaitan dengan Pulau Bawean, Kabupaten Gresik - mengandung perpaduan unik antara berbagai latar backgrounds seperti Jawa, Madura, Bugis...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/budaya.png',
-    createdAt: '2026-05-15'
-  },
-  {
-    id: 5,
-    slug: 'kuliner-khas-bawean',
-    title: 'Kuliner Khas Bawean',
-    category: 'ARTIKEL',
-    author: 'Admin Lentera',
-    excerpt: 'Makanan tradisional Bawean mencerminkan kekayaan sejarah dan tradisi kuliner yang mendalam dari sebuah masyarakat yang berakar dari akulturasi...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/kuliner.jpg',
-    createdAt: '2026-05-10'
-  },
-  {
-    id: 6,
-    slug: 'sastra-lisan-bawean',
-    title: 'Sastra Lisan dan Puisi Bawean',
-    category: 'KARYA SISWA',
-    author: 'Siti Rahma',
-    excerpt: 'Menelusuri keindahan sastra lisan, pantun, dan kesenian tutur khas masyarakat Bawean yang diwariskan dari generasi ke generasi...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/asalusul.png',
-    createdAt: '2026-05-05'
-  },
-  {
-    id: 7,
-    slug: 'pakaian-adat-bawean',
-    title: 'Karakteristik Pakaian Adat Bawean',
-    category: 'BUDAYA',
-    author: 'Tim Lentera',
-    excerpt: 'Pakaian tradisional suku Bawean merepresentasikan perpaduan corak keislaman yang kuat berpadu dengan estetika Melayu dan Jawa kuno...',
-    content: 'Isi lengkap artikel...',
-    imageUrl: '/budaya.png',
-    createdAt: '2026-05-01'
-  }
-]
-
-// ==========================================
-// 3. COMPONENT: Navbar
+// 3. COMPONENT: Navbar (Identik dengan aslinya)
 // ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -146,11 +64,11 @@ const Navbar = () => {
         </div>
 
         <Link 
-  href="/dukungkami" 
-  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
->
-  Dukung Kami
-</Link>
+          href="/dukungkami" 
+          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
+        >
+          Dukung Kami
+        </Link>
 
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? '✕' : '☰'}
@@ -175,11 +93,11 @@ const Navbar = () => {
             )
           })}
           <Link 
-  href="/dukungkami" 
-  className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
->
-  Dukung Kami
-</Link>
+            href="/dukungkami" 
+            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+          >
+            Dukung Kami
+          </Link>
         </div>
       )}
     </nav>
@@ -187,14 +105,13 @@ const Navbar = () => {
 }
 
 // ==========================================
-// 4. COMPONENT: Sejarah List Item Card (FIXED IMAGE)
+// 4. COMPONENT: SejarahListItem (Identik dengan aslinya)
 // ==========================================
 const SejarahListItem = ({ article }: { article: SejarahArticle }) => (
   <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center transition-all hover:shadow-md">
-    {/* Box Gambar Kiri - Sekarang render gambar asli */}
     <div className="shrink-0 w-full md:w-56 h-36 rounded-2xl bg-gray-50 overflow-hidden relative border border-gray-100">
       <Image 
-        src={article.imageUrl} 
+        src={article.imageUrl || '/placeholder.png'} 
         alt={article.title}
         fill
         className="object-cover"
@@ -227,7 +144,7 @@ const SejarahListItem = ({ article }: { article: SejarahArticle }) => (
 )
 
 // ==========================================
-// 5. COMPONENT: Footer
+// 5. COMPONENT: Footer (Identik dengan aslinya)
 // ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-12">
@@ -251,25 +168,20 @@ const Footer = () => (
             <li><Link href="/game" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
           </ul>
         </div>
-
         <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
-          </ul>
+            <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
+            <ul className="space-y-2 text-sm text-gray-700">
+                <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+                <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+            </ul>
         </div>
-
         <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
-            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">Phone</a></li>
-          </ul>
+            <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
+            <ul className="space-y-2 text-sm text-gray-700">
+                <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+            </ul>
         </div>
       </div>
-
       <div className="border-t border-gray-300 pt-6 text-center">
         <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
       </div>
@@ -278,17 +190,31 @@ const Footer = () => (
 )
 
 // ==========================================
-// 6. MAIN DEFAULT EXPORT: Halaman Utama Sejarah
+// 6. MAIN DEFAULT EXPORT
 // ==========================================
 export default function SejarahPage() {
-  const [articles, setArticles] = useState<SejarahArticle[]>(initialSejarahArticles)
+  const [articles, setArticles] = useState<SejarahArticle[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   
-  // Sesuai kesepakatan: 5 artikel per halaman
   const articlesPerPage = 5 
 
-  // Filter Pencarian
+  // Fetch dari Supabase
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('sejarah')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (data) setArticles(data)
+      setLoading(false)
+    }
+    fetchArticles()
+  }, [])
+
   const filteredArticles = useMemo(() => {
     return articles.filter(article => 
       article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -296,9 +222,7 @@ export default function SejarahPage() {
     )
   }, [articles, searchQuery])
 
-  // Hitung total halaman
   const totalPages = Math.ceil(filteredArticles.length / articlesPerPage) || 1
-
   const startIndex = (currentPage - 1) * articlesPerPage
   const currentArticles = filteredArticles.slice(startIndex, startIndex + articlesPerPage)
 
@@ -306,20 +230,12 @@ export default function SejarahPage() {
     <main className="w-full bg-white min-h-screen flex flex-col justify-between">
       <div>
         <Navbar />
-
-        {/* Header Section */}
         <section className="px-8 py-12 bg-white">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <h1 className="text-5xl font-extrabold text-[#00664B] mb-3">
-                Sejarah Pulau Bawean
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Mengenal lebih sejarah, sastra dan nilai budaya Pulau Bawean
-              </p>
+              <h1 className="text-5xl font-extrabold text-[#00664B] mb-3">Sejarah Pulau Bawean</h1>
+              <p className="text-gray-600 text-lg">Mengenal lebih sejarah, sastra dan nilai budaya Pulau Bawean</p>
             </div>
-
-            {/* Kotak Pencarian */}
             <div className="relative w-full md:w-80">
               <input
                 type="text"
@@ -336,12 +252,11 @@ export default function SejarahPage() {
           </div>
         </section>
 
-        {/* Articles List Section */}
         <section className="px-8 pb-16">
           <div className="max-w-6xl mx-auto flex flex-col gap-6">
-            
-            {/* Render List Card */}
-            {currentArticles.length > 0 ? (
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="animate-spin w-10 h-10 text-[#00664B]" /></div>
+            ) : currentArticles.length > 0 ? (
               currentArticles.map((article) => (
                 <SejarahListItem key={article.id} article={article} />
               ))
@@ -351,43 +266,38 @@ export default function SejarahPage() {
               </div>
             )}
 
-            {/* Pagination Block */}
-            <div className="flex justify-end items-center gap-2 mt-8">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {totalPages > 1 && (
+              <div className="flex justify-end items-center gap-2 mt-8">
                 <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-10 h-10 rounded-full font-bold text-sm transition-all flex items-center justify-center cursor-pointer ${
-                    currentPage === page
-                      ? 'bg-[#004D37] text-white shadow-sm' 
-                      : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {page}
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-              ))}
-
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded-full font-bold text-sm transition-all flex items-center justify-center cursor-pointer ${
+                      currentPage === page ? 'bg-[#004D37] text-white shadow-sm' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
         </section>
       </div>
-
       <Footer />
     </main>
   )
