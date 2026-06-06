@@ -12,6 +12,7 @@ import {
 interface KamusItem {
   id: string
   kata_alos: string
+  kata_sedang: string // <-- BARU DITAMBAHKAN
   kata_kasar: string
   arti_indonesia: string
   contoh_kalimat: string
@@ -41,6 +42,7 @@ export default function AdminDashboardPage() {
 
   // --- STATE FORM INPUT KAMUS ---
   const [kataAlos, setKataAlos] = useState('')
+  const [kataSedang, setKataSedang] = useState('') // <-- BARU DITAMBAHKAN
   const [kataKasar, setKataKasar] = useState('')
   const [artiIndo, setArtiIndo] = useState('')
   const [contohKalimat, setContohKalimat] = useState('')
@@ -99,8 +101,9 @@ export default function AdminDashboardPage() {
   const handleAddKamus = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!kataAlos || !artiIndo) {
-      alert('Kata Halus dan Arti Indonesia wajib diisi!')
+    // Validasi: Minimal 1 kata Bawean (Alus/Sedang/Kasar) dan Arti Indo wajib diisi
+    if (!artiIndo || (!kataAlos && !kataSedang && !kataKasar)) {
+      alert('Minimal isi satu jenis kata (Halus/Sedang/Kasar) dan Arti Indonesia wajib diisi!')
       return
     }
 
@@ -111,7 +114,6 @@ export default function AdminDashboardPage() {
       // 1. Proses Upload Audio (Jika Ada)
       if (audioFile) {
         const fileExt = audioFile.name.split('.').pop()
-        // Penamaan file unik: timestamp + string acak agar tidak bentrok
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`
         
         const { error: uploadError } = await supabase.storage
@@ -123,7 +125,6 @@ export default function AdminDashboardPage() {
 
         if (uploadError) throw uploadError
 
-        // Ambil URL Publik
         const { data: { publicUrl } } = supabase.storage
           .from('audio-pelafalan')
           .getPublicUrl(fileName)
@@ -134,7 +135,8 @@ export default function AdminDashboardPage() {
       // 2. Simpan Data ke Database
       const { error } = await supabase.from('kamus').insert([
         {
-          kata_alos: kataAlos,
+          kata_alos: kataAlos || null,
+          kata_sedang: kataSedang || null, // <-- INSERT KATA SEDANG
           kata_kasar: kataKasar || null,
           arti_indonesia: artiIndo,
           contoh_kalimat: contohKalimat || null,
@@ -147,13 +149,13 @@ export default function AdminDashboardPage() {
 
       // 3. Reset Form & Refresh
       setKataAlos('')
+      setKataSedang('') // <-- RESET STATE
       setKataKasar('')
       setArtiIndo('')
       setContohKalimat('')
       setArtiContoh('')
       setAudioFile(null)
       
-      // Reset input file via DOM trick agar tampilan kembali bersih
       const fileInput = document.getElementById('audio-input') as HTMLInputElement
       if (fileInput) fileInput.value = ''
 
@@ -179,7 +181,6 @@ export default function AdminDashboardPage() {
     let uploadedCoverUrl = ''
 
     try {
-      // 1. Proses Upload Gambar Cover (Jika Ada)
       if (coverFile) {
         const fileExt = coverFile.name.split('.').pop()
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`
@@ -200,10 +201,8 @@ export default function AdminDashboardPage() {
         uploadedCoverUrl = publicUrl
       }
 
-      // Buat slug otomatis yang aman untuk URL
       const slug = judulArtikel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
 
-      // 2. Simpan Data ke Database
       const { error } = await supabase.from('sejarah').insert([
         {
           judul: judulArtikel,
@@ -216,7 +215,6 @@ export default function AdminDashboardPage() {
 
       if (error) throw error
 
-      // 3. Reset Form & Refresh
       setJudulArtikel('')
       setKontenArtikel('')
       setCoverFile(null)
@@ -250,10 +248,8 @@ export default function AdminDashboardPage() {
   const handleLogout = async () => {
     setLoading(true)
     await supabase.auth.signOut()
-    // Redirect akan ditangani oleh onAuthStateChange di useEffect
   }
 
-  // --- RENDER LOADING SCREEN ---
   if (loading) {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center bg-white gap-4">
@@ -263,11 +259,10 @@ export default function AdminDashboardPage() {
     )
   }
 
-  // --- RENDER UI UTAMA ---
   return (
     <div className="w-full min-h-screen bg-[#F8F9FA] flex font-sans text-gray-900">
       
-      {/* ================= SIDEBAR NAVIGATION ================= */}
+      {/* SIDEBAR NAVIGATION */}
       <aside className="w-[280px] bg-white border-r border-gray-100 flex flex-col justify-between p-6 shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.01)] z-10 hidden md:flex">
         <div className="flex flex-col gap-10">
           <div className="px-2">
@@ -284,31 +279,19 @@ export default function AdminDashboardPage() {
           <nav className="flex flex-col gap-2">
             <p className="px-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Menu Utama</p>
             
-            <button 
-              onClick={() => setActiveMenu('dashboard')}
-              className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'dashboard' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
-            >
+            <button onClick={() => setActiveMenu('dashboard')} className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'dashboard' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
               <LayoutDashboard className="w-5 h-5" /> Ikhtisar Dashboard
             </button>
             
-            <button 
-              onClick={() => setActiveMenu('kamus')}
-              className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'kamus' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
-            >
+            <button onClick={() => setActiveMenu('kamus')} className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'kamus' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
               <BookOpen className="w-5 h-5" /> Kelola Kosakata
             </button>
 
-            <button 
-              onClick={() => setActiveMenu('sejarah')}
-              className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'sejarah' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
-            >
+            <button onClick={() => setActiveMenu('sejarah')} className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'sejarah' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
               <FileText className="w-5 h-5" /> Artikel Sejarah
             </button>
 
-            <button 
-              onClick={() => setActiveMenu('pesanan')}
-              className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'pesanan' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
-            >
+            <button onClick={() => setActiveMenu('pesanan')} className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === 'pesanan' ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
               <ShoppingBag className="w-5 h-5" /> Pesanan Merchandise
             </button>
           </nav>
@@ -321,17 +304,17 @@ export default function AdminDashboardPage() {
         </div>
       </aside>
 
-      {/* ================= MAIN CONTENT AREA ================= */}
+      {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col h-screen overflow-y-auto w-full">
         <header className="bg-white border-b border-gray-100 px-6 md:px-10 py-6 sticky top-0 z-10 flex justify-between items-center">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 capitalize">
-            {activeMenu === 'dashboard' ? 'Ikhtisar Sistem' : activeMenu === 'kamus' ? 'Kamus Abhesa Halus' : activeMenu === 'sejarah' ? 'Artikel Sejarah Bawean' : 'Daftar Pesanan'}
+            {activeMenu === 'dashboard' ? 'Ikhtisar Sistem' : activeMenu === 'kamus' ? 'Manajemen Kamus' : activeMenu === 'sejarah' ? 'Artikel Sejarah Bawean' : 'Daftar Pesanan'}
           </h1>
         </header>
 
         <div className="p-6 md:p-10 pb-20">
           
-          {/* ---------------- TAB 1: DASHBOARD ---------------- */}
+          {/* TAB 1: DASHBOARD */}
           {activeMenu === 'dashboard' && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <div className="bg-white p-6 border border-gray-100 rounded-[20px] shadow-sm">
@@ -351,7 +334,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* ---------------- TAB 2: KELOLA KAMUS ---------------- */}
+          {/* TAB 2: KELOLA KAMUS */}
           {activeMenu === 'kamus' && (
             <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.8fr] gap-8 items-start">
               {/* Form Input Kamus */}
@@ -359,18 +342,23 @@ export default function AdminDashboardPage() {
                 <h2 className="text-base font-bold text-gray-900 mb-2">Tambah Kosakata</h2>
                 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Kata Halus (Abhesa Alos) *</label>
-                  <input type="text" required value={kataAlos} onChange={e => setKataAlos(e.target.value)} placeholder="Contoh: Kabhun" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Kata Halus (Alos)</label>
+                  <input type="text" value={kataAlos} onChange={e => setKataAlos(e.target.value)} placeholder="Contoh: Dha'ar" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Kata Sedang (Tengnga'an)</label>
+                  <input type="text" value={kataSedang} onChange={e => setKataSedang(e.target.value)} placeholder="Contoh: Kakan" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Kata Biasa/Kasar</label>
-                  <input type="text" value={kataKasar} onChange={e => setKataKasar(e.target.value)} placeholder="Contoh: Kebun" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Kata Kasar (Kasar)</label>
+                  <input type="text" value={kataKasar} onChange={e => setKataKasar(e.target.value)} placeholder="Contoh: Nguntal" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
                 </div>
                 
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Arti Bahasa Indonesia *</label>
-                  <input type="text" required value={artiIndo} onChange={e => setArtiIndo(e.target.value)} placeholder="Contoh: Kebun / Pekarangan" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
+                  <input type="text" required value={artiIndo} onChange={e => setArtiIndo(e.target.value)} placeholder="Contoh: Makan" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" />
                 </div>
                 
                 <div>
@@ -406,16 +394,22 @@ export default function AdminDashboardPage() {
                   <table className="w-full text-left text-sm border-collapse">
                     <thead>
                       <tr className="border-b border-gray-100 text-gray-400 font-bold">
-                        <th className="pb-3 w-[30%]">Kata Halus</th>
-                        <th className="pb-3 w-[40%]">Arti Indonesia</th>
+                        <th className="pb-3 w-[35%]">Kata (Alus / Sedang / Kasar)</th>
+                        <th className="pb-3 w-[35%]">Arti Indonesia</th>
                         <th className="pb-3 text-center w-[15%]">Audio</th>
-                        <th className="pb-3 text-right w-[15%]">Hapus</th>
+                        <th className="pb-3 text-right w-[15%]">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
                       {kamusList.map((item) => (
                         <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                          <td className="py-3.5 font-bold text-[#005C43] truncate">{item.kata_alos}</td>
+                          <td className="py-3.5">
+                            <div className="flex flex-col gap-1">
+                              {item.kata_alos && <span className="font-bold text-[#005C43]"><span className="text-xs text-gray-400 font-normal mr-1">Alus:</span>{item.kata_alos}</span>}
+                              {item.kata_sedang && <span className="font-bold text-blue-600"><span className="text-xs text-gray-400 font-normal mr-1">Sedang:</span>{item.kata_sedang}</span>}
+                              {item.kata_kasar && <span className="font-bold text-orange-600"><span className="text-xs text-gray-400 font-normal mr-1">Kasar:</span>{item.kata_kasar}</span>}
+                            </div>
+                          </td>
                           <td className="py-3.5 text-gray-600 truncate">{item.arti_indonesia}</td>
                           <td className="py-3.5 text-center">
                             {item.audio_url ? (
@@ -441,7 +435,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* ---------------- TAB 3: KELOLA SEJARAH ---------------- */}
+          {/* TAB 3: KELOLA SEJARAH */}
           {activeMenu === 'sejarah' && (
             <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.8fr] gap-8 items-start">
               {/* Form Input Artikel */}
@@ -506,7 +500,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* ---------------- TAB 4: PESANAN MERCHANDISE ---------------- */}
+          {/* TAB 4: PESANAN MERCHANDISE */}
           {activeMenu === 'pesanan' && (
             <div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-10 text-center flex flex-col items-center justify-center min-h-[400px]">
               <div className="w-20 h-20 bg-[#EBF2EF] rounded-full flex items-center justify-center mb-6">

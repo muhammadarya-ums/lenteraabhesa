@@ -8,12 +8,14 @@ import { usePathname } from 'next/navigation'
 
 interface VocabularyItem {
   id: number
-  word: string
-  level: string
-  meaning: string
-  example: string
-  exampleMeaning: string
-  pronunciation: string
+  kata_alos: string
+  kata_sedang: string
+  kata_kasar: string
+  arti_indonesia: string
+  contoh_kalimat: string
+  arti_contoh: string
+  pelafalan: string
+  audio_url?: string
 }
 
 // 1. COMPONENT: Navbar
@@ -56,11 +58,11 @@ const Navbar = () => {
         </div>
 
         <Link 
-  href="/dukungkami" 
-  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
->
-  Dukung Kami
-</Link>
+          href="/dukungkami" 
+          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
+        >
+          Dukung Kami
+        </Link>
 
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? '✕' : '☰'}
@@ -85,87 +87,90 @@ const Navbar = () => {
             )
           })}
           <Link 
-  href="/dukungkami" 
-  className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
->
-  Dukung Kami
-</Link>
+            href="/dukungkami" 
+            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+          >
+            Dukung Kami
+          </Link>
         </div>
       )}
     </nav>
   )
 }
 
-// 2. DATA: Vocabulary Data Lengkap A-Z Sesuai Gambar Lampiran (Tanpa Dummy Card)
+// 2. DATA: Vocabulary Data Lengkap A-Z (Disempurnakan dengan Struktur 3 Tingkat)
 const vocabularyData: VocabularyItem[] = [
-  { id: 1, word: 'Anape', level: 'Halus', meaning: 'Kenapa', example: 'Anape dhasar ring abdi muka', exampleMeaning: '(Kenapa wajah saya terlihat putih)', pronunciation: 'ah-nah-peh' },
-  { id: 2, word: 'Bule', level: 'Halus', meaning: 'Saya', example: 'Bule sare ring tongguan', exampleMeaning: '(Saya tertidur di tempat tidur)', pronunciation: 'boo-leh' },
-  { id: 3, word: 'Compok', level: 'Halus', meaning: 'Rumah', example: 'Kulo nggon compok ring Bawean', exampleMeaning: '(Saya punya rumah di Bawean)', pronunciation: 'chom-pok' },
-  { id: 4, word: 'Dhahar', level: 'Halus', meaning: 'makan', example: 'Kulo Dhahar nasi goreng', exampleMeaning: '(Saya makan nasi goreng)', pronunciation: 'dhah-har' },
-  { id: 5, word: 'Endhog', level: 'Halus', meaning: 'Telur', example: 'Endhog ayam sare ring sarang', exampleMeaning: '(Telur ayam di sarang)', pronunciation: 'end-hog' },
-  { id: 6, word: 'Firman', level: 'Halus', meaning: 'Perintah', example: 'Firman saking guru ring murid', exampleMeaning: '(Perintah dari guru ke murid)', pronunciation: 'fir-man' },
-  { id: 7, word: 'Gatuk', level: 'Halus', meaning: 'Minum', example: 'Mator sakalangkong jhek gatuk', exampleMeaning: '(Terima kasih sudah minum)', pronunciation: 'gah-took' },
-  { id: 8, word: 'Hedhog', level: 'Halus', meaning: 'Sayur', example: 'Hedhog nika bhengal dheddi', exampleMeaning: '(Sayur itu rasanya segar)', pronunciation: 'hed-hog' },
-  { id: 9, word: 'Iwak', level: 'Halus', meaning: 'Ikan', example: 'Iwak bandeng nggon Bawean', exampleMeaning: '(Ikan bandeng punya Bawean)', pronunciation: 'ee-wak' },
-  { id: 10, word: 'Jajan', level: 'Halus', meaning: 'Makanan ringan', example: 'Melle jajan ring pasar', exampleMeaning: '(Membeli makanan ringan di pasar)', pronunciation: 'jah-jan' },
-  { id: 11, word: 'Kebo', level: 'Halus', meaning: 'Kerbau', example: 'Kebo nika mloba ring sabha', exampleMeaning: '(Kerbau itu membajak di sawah)', pronunciation: 'kuh-boh' },
-  { id: 12, word: 'Luwih', level: 'Halus', meaning: 'Lebih', example: 'Luwih dheri se dhi-odhi', exampleMeaning: '(Lebih dari yang dikira)', pronunciation: 'loo-wih' },
-  { id: 13, word: 'Mangan', level: 'Halus', meaning: 'Makan', example: 'Mangan areng-sareng kanca', exampleMeaning: '(Makan bersama-sama teman)', pronunciation: 'mah-ngan' },
-  { id: 14, word: 'Ngombe', level: 'Halus', meaning: 'Minum', example: 'Ngombe aeng dheri genthong', exampleMeaning: '(Minum air dari gentong)', pronunciation: 'ngom-beh' },
-  { id: 15, word: 'Omah', level: 'Halus', meaning: 'Rumah', example: 'Omah bhagus nggon abdi', exampleMeaning: '(Rumah bagus milik saya)', pronunciation: 'oh-mah' },
-  { id: 16, word: 'Pangan', level: 'Halus', meaning: 'Makanan', example: 'Pangan nika halal dheddi', exampleMeaning: '(Makanan itu halal jadinya)', pronunciation: 'pah-ngan' },
-  { id: 17, word: 'Qurban', level: 'Halus', meaning: 'Pengorbanan', example: 'Qurban areng nggon ibadah', exampleMeaning: '(Berkurban demi ibadah)', pronunciation: 'koor-ban' },
-  { id: 18, word: 'Rembug', level: 'Halus', meaning: 'Diskusi', example: 'Rembug mufakat areng warga', exampleMeaning: '(Diskusi mufakat bersama warga)', pronunciation: 'rem-boog' },
-  { id: 19, word: 'Sakedap', level: 'Halus', meaning: 'Sebentar', example: 'Nantos sakedap melre', exampleMeaning: '(Tunggu sebentar saja)', pronunciation: 'sah-kuh-dap' },
-  { id: 20, word: 'Tamba', level: 'Halus', meaning: 'Tambah', example: 'Tamba aeng sacokobbha', exampleMeaning: '(Tambah air secukupnya)', pronunciation: 'tam-bah' },
-  { id: 21, word: 'Ulam', level: 'Halus', meaning: 'Sayuran', example: 'Ulam dhing dheddi daddhien', exampleMeaning: '(Sayuran yang dimasak matang)', pronunciation: 'oo-lam' },
-  { id: 22, word: 'Vas', level: 'Halus', meaning: 'Penampung bunga', example: 'Vas bhengal ghinto se raddin', exampleMeaning: '(Vas bunga itu indah sekali)', pronunciation: 'vas' },
-  { id: 23, word: 'Werni', level: 'Halus', meaning: 'Warna', example: 'Werni kalambhina abdi celleng', exampleMeaning: '(Warna bajunya saya hitam)', pronunciation: 'wer-nee' },
-  { id: 24, word: 'Xerxes', level: 'Halus', meaning: 'Nama Raja', example: 'Kisah Raja Xerxes ring buku', exampleMeaning: '(Kisah Raja Xerxes di dalam buku)', pronunciation: 'zerk-zes' },
-  { id: 25, word: 'Yuswa', level: 'Halus', meaning: 'Umur', example: 'Yuswana ampon dhi-seppo', exampleMeaning: '(Umurnya sudah sangat tua)', pronunciation: 'yoos-wah' },
-  { id: 26, word: 'Zikir', level: 'Halus', meaning: 'Pengingatan Tuhan', example: 'Zikir ampon neng nggon ati', exampleMeaning: '(Zikir sudah menetap di dalam hati)', pronunciation: 'zee-kir' },
+  { id: 1, kata_alos: 'Anape', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Kenapa', contoh_kalimat: 'Anape dhasar ring abdi muka', arti_contoh: '(Kenapa wajah saya terlihat putih)', pelafalan: 'ah-nah-peh' },
+  { id: 2, kata_alos: 'Bule', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Saya', contoh_kalimat: 'Bule sare ring tongguan', arti_contoh: '(Saya tertidur di tempat tidur)', pelafalan: 'boo-leh' },
+  { id: 3, kata_alos: 'Compok', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Rumah', contoh_kalimat: 'Kulo nggon compok ring Bawean', arti_contoh: '(Saya punya rumah di Bawean)', pelafalan: 'chom-pok' },
+  { id: 4, kata_alos: 'Dhahar', kata_sedang: '', kata_kasar: '', arti_indonesia: 'makan', contoh_kalimat: 'Kulo Dhahar nasi goreng', arti_contoh: '(Saya makan nasi goreng)', pelafalan: 'dhah-har' },
+  { id: 5, kata_alos: 'Endhog', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Telur', contoh_kalimat: 'Endhog ayam sare ring sarang', arti_contoh: '(Telur ayam di sarang)', pelafalan: 'end-hog' },
+  { id: 6, kata_alos: 'Firman', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Perintah', contoh_kalimat: 'Firman saking guru ring murid', arti_contoh: '(Perintah dari guru ke murid)', pelafalan: 'fir-man' },
+  { id: 7, kata_alos: 'Gatuk', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Minum', contoh_kalimat: 'Mator sakalangkong jhek gatuk', arti_contoh: '(Terima kasih sudah minum)', pelafalan: 'gah-took' },
+  { id: 8, kata_alos: 'Hedhog', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Sayur', contoh_kalimat: 'Hedhog nika bhengal dheddi', arti_contoh: '(Sayur itu rasanya segar)', pelafalan: 'hed-hog' },
+  { id: 9, kata_alos: 'Iwak', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Ikan', contoh_kalimat: 'Iwak bandeng nggon Bawean', arti_contoh: '(Ikan bandeng punya Bawean)', pelafalan: 'ee-wak' },
+  { id: 10, kata_alos: 'Jajan', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Makanan ringan', contoh_kalimat: 'Melle jajan ring pasar', arti_contoh: '(Membeli makanan ringan di pasar)', pelafalan: 'jah-jan' },
+  { id: 11, kata_alos: 'Kebo', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Kerbau', contoh_kalimat: 'Kebo nika mloba ring sabha', arti_contoh: '(Kerbau itu membajak di sawah)', pelafalan: 'kuh-boh' },
+  { id: 12, kata_alos: 'Luwih', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Lebih', contoh_kalimat: 'Luwih dheri se dhi-odhi', arti_contoh: '(Lebih dari yang dikira)', pelafalan: 'loo-wih' },
+  { id: 13, kata_alos: 'Mangan', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Makan', contoh_kalimat: 'Mangan areng-sareng kanca', arti_contoh: '(Makan bersama-sama teman)', pelafalan: 'mah-ngan' },
+  { id: 14, kata_alos: 'Ngombe', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Minum', contoh_kalimat: 'Ngombe aeng dheri genthong', arti_contoh: '(Minum air dari gentong)', pelafalan: 'ngom-beh' },
+  { id: 15, kata_alos: 'Omah', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Rumah', contoh_kalimat: 'Omah bhagus nggon abdi', arti_contoh: '(Rumah bagus milik saya)', pelafalan: 'oh-mah' },
+  { id: 16, kata_alos: 'Pangan', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Makanan', contoh_kalimat: 'Pangan nika halal dheddi', arti_contoh: '(Makanan itu halal jadinya)', pelafalan: 'pah-ngan' },
+  { id: 17, kata_alos: 'Qurban', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Pengorbanan', contoh_kalimat: 'Qurban areng nggon ibadah', arti_contoh: '(Berkurban demi ibadah)', pelafalan: 'koor-ban' },
+  { id: 18, kata_alos: 'Rembug', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Diskusi', contoh_kalimat: 'Rembug mufakat areng warga', arti_contoh: '(Diskusi mufakat bersama warga)', pelafalan: 'rem-boog' },
+  { id: 19, kata_alos: 'Sakedap', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Sebentar', contoh_kalimat: 'Nantos sakedap melre', arti_contoh: '(Tunggu sebentar saja)', pelafalan: 'sah-kuh-dap' },
+  { id: 20, kata_alos: 'Tamba', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Tambah', contoh_kalimat: 'Tamba aeng sacokobbha', arti_contoh: '(Tambah air secukupnya)', pelafalan: 'tam-bah' },
+  { id: 21, kata_alos: 'Ulam', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Sayuran', contoh_kalimat: 'Ulam dhing dheddi daddhien', arti_contoh: '(Sayuran yang dimasak matang)', pelafalan: 'oo-lam' },
+  { id: 22, kata_alos: 'Vas', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Penampung bunga', contoh_kalimat: 'Vas bhengal ghinto se raddin', arti_contoh: '(Vas bunga itu indah sekali)', pelafalan: 'vas' },
+  { id: 23, kata_alos: 'Werni', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Warna', contoh_kalimat: 'Werni kalambhina abdi celleng', arti_contoh: '(Warna bajunya saya hitam)', pelafalan: 'wer-nee' },
+  { id: 24, kata_alos: 'Xerxes', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Nama Raja', contoh_kalimat: 'Kisah Raja Xerxes ring buku', arti_contoh: '(Kisah Raja Xerxes di dalam buku)', pelafalan: 'zerk-zes' },
+  { id: 25, kata_alos: 'Yuswa', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Umur', contoh_kalimat: 'Yuswana ampon dhi-seppo', arti_contoh: '(Umurnya sudah sangat tua)', pelafalan: 'yoos-wah' },
+  { id: 26, kata_alos: 'Zikir', kata_sedang: '', kata_kasar: '', arti_indonesia: 'Pengingatan Tuhan', contoh_kalimat: 'Zikir ampon neng nggon ati', arti_contoh: '(Zikir sudah menetap di dalam hati)', pelafalan: 'zee-kir' },
 ]
 
-const getLevelColor = (level: string) => {
-  switch (level) {
-    case 'Halus': return '#10B981'
-    case 'Sedang': return '#3B82F6'
-    case 'Kasar': return '#EF4444'
-    default: return '#10B981'
-  }
-}
-
-// 3. COMPONENT: Vocabulary Card (Desain Presisi Mengikuti Gambar)
+// 3. COMPONENT: Vocabulary Card
 const VocabularyCard = ({
-  word,
-  level,
-  meaning,
+  item,
   onClick,
 }: {
-  word: string
-  level: string
-  meaning: string
+  item: VocabularyItem
   onClick: () => void
 }) => (
   <div
     onClick={onClick}
-    className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-3"
+    className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer flex flex-col gap-4"
   >
-    <div className="flex items-center gap-2">
-      <h3 className="text-xl font-bold text-gray-900">{word}</h3>
-      <Volume2 className="w-5 h-5 text-[#005C43] hover:opacity-80 transition-opacity" />
+    <div className="flex flex-col gap-3">
+      {item.kata_alos && (
+        <div className="flex items-center gap-3">
+          <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#10B981] bg-[#10B981]/10 rounded-md">Alus</span>
+          <span className="text-xl font-bold text-gray-900">{item.kata_alos}</span>
+          {item.audio_url && <Volume2 className="w-4 h-4 text-gray-400" />}
+        </div>
+      )}
+      
+      {item.kata_sedang && (
+        <div className="flex items-center gap-3">
+          <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#3B82F6] bg-[#3B82F6]/10 rounded-md">Sedang</span>
+          <span className="text-xl font-bold text-gray-900">{item.kata_sedang}</span>
+        </div>
+      )}
+
+      {item.kata_kasar && (
+        <div className="flex items-center gap-3">
+          <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#EF4444] bg-[#EF4444]/10 rounded-md">Kasar</span>
+          <span className="text-xl font-bold text-gray-900">{item.kata_kasar}</span>
+        </div>
+      )}
     </div>
-    <div className="flex items-center gap-2">
-      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getLevelColor(level) }}></div>
-      <span className="text-sm font-medium text-[#00664B]">Bahas {level}</span>
-    </div>
-    <div className="flex items-center gap-2 mt-1">
+
+    <div className="flex items-center gap-2 mt-1 pt-4 border-t border-gray-50">
       {/* Bendera Merah Putih Mini */}
-      <div className="w-5 h-3.5 flex flex-col rounded-sm overflow-hidden border border-gray-200">
+      <div className="w-5 h-3.5 flex flex-col rounded-sm overflow-hidden border border-gray-200 shrink-0">
         <div className="bg-red-600 h-1/2 w-full"></div>
         <div className="bg-white h-1/2 w-full"></div>
       </div>
-      <p className="text-sm text-gray-600 font-medium capitalize">{meaning}</p>
+      <p className="text-sm text-gray-600 font-medium capitalize line-clamp-2">{item.arti_indonesia}</p>
     </div>
   </div>
 )
@@ -176,34 +181,60 @@ const Modal = ({ isOpen, onClose, item }: { isOpen: boolean; onClose: () => void
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose}></div>
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-50 w-11/12 max-w-xl p-8">
-        <button onClick={onClose} className="absolute top-6 right-6 text-gray-500 hover:text-gray-700 transition-colors">
+      <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-50 w-11/12 max-w-xl p-8 max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 transition-colors">
           <X className="w-6 h-6" />
         </button>
 
         <div className="flex flex-col gap-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-3xl font-extrabold text-gray-900">{item.word}</h3>
-              <button className="p-1.5 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors cursor-pointer">
-                <Volume2 className="w-5 h-5 text-gray-600" />
+          <div className="flex flex-col gap-4">
+            
+            {/* Tingkatan Kata */}
+            <div className="flex flex-col gap-3">
+              {item.kata_alos && (
+                <div className="flex items-center gap-4">
+                  <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#10B981] bg-[#10B981]/10 rounded-md w-20 text-center">Alus</span>
+                  <h3 className="text-2xl font-extrabold text-gray-900">{item.kata_alos}</h3>
+                </div>
+              )}
+              {item.kata_sedang && (
+                <div className="flex items-center gap-4">
+                  <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#3B82F6] bg-[#3B82F6]/10 rounded-md w-20 text-center">Sedang</span>
+                  <h3 className="text-2xl font-extrabold text-gray-900">{item.kata_sedang}</h3>
+                </div>
+              )}
+              {item.kata_kasar && (
+                <div className="flex items-center gap-4">
+                  <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#EF4444] bg-[#EF4444]/10 rounded-md w-20 text-center">Kasar</span>
+                  <h3 className="text-2xl font-extrabold text-gray-900">{item.kata_kasar}</h3>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button className="p-2 bg-[#EBF2EF] rounded-full hover:bg-[#005C43]/20 transition-colors cursor-pointer text-[#005C43]">
+                <Volume2 className="w-5 h-5" />
               </button>
+              <span className="text-sm text-gray-500 font-mono">/ {item.pelafalan} /</span>
             </div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getLevelColor(item.level) }}></div>
-              <span className="text-sm font-semibold text-gray-600">{item.level}</span>
-              <span className="text-xs text-gray-400 font-mono">/ {item.pronunciation} /</span>
+
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <div className="flex items-center gap-2 mb-2">
+                 <div className="w-6 h-4 flex flex-col rounded-sm overflow-hidden border border-gray-200">
+                  <div className="bg-red-600 h-1/2 w-full"></div>
+                  <div className="bg-white h-1/2 w-full"></div>
+                </div>
+                <span className="font-semibold text-gray-500 text-sm">Arti Bahasa Indonesia:</span>
+              </div>
+              <p className="text-xl text-gray-800 font-medium">{item.arti_indonesia}</p>
             </div>
-            <p className="text-lg text-gray-800 border-t border-gray-100 pt-3">
-              <span className="font-semibold text-[#00664B]">Arti:</span> {item.meaning}
-            </p>
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Contoh Penggunaan</p>
-            <p className="text-lg font-bold text-red-600 mb-1">{item.example}</p>
-            <p className="text-sm text-gray-600 italic">{item.exampleMeaning}</p>
+          <div className="bg-[#EAF2ED]/50 p-5 rounded-xl border border-[#005C43]/10">
+            <p className="text-xs font-bold text-[#005C43] uppercase tracking-wider mb-2">Contoh Penggunaan</p>
+            <p className="text-lg font-bold text-gray-800 mb-1">{item.contoh_kalimat}</p>
+            <p className="text-sm text-gray-600 italic">{item.arti_contoh}</p>
           </div>
         </div>
       </div>
@@ -260,6 +291,11 @@ const Footer = () => (
   </footer>
 )
 
+// Helper untuk mendapatkan kata utama (Acuan pengelompokan abjad)
+const getPrimaryWord = (item: VocabularyItem) => {
+  return item.kata_alos || item.kata_sedang || item.kata_kasar || ''
+}
+
 // 6. MAIN DEFAULT EXPORT
 export default function KamusPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -272,9 +308,10 @@ export default function KamusPage() {
   // Menyiapkan list grup A-Z untuk halaman utama secara dinamis
   const groupedVocabulary = useMemo(() => {
     return alphabet.map((letter) => {
-      const items = vocabularyData.filter(
-        (item) => item.word.charAt(0).toUpperCase() === letter
-      )
+      const items = vocabularyData.filter((item) => {
+        const primary = getPrimaryWord(item)
+        return primary.charAt(0).toUpperCase() === letter
+      })
       return { letter, items }
     })
   }, [])
@@ -282,14 +319,18 @@ export default function KamusPage() {
   // Filter untuk pencarian bar atau klik abjad tunggal
   const filteredVocabulary = useMemo(() => {
     return vocabularyData.filter((item) => {
+      // Cek semua variasi kata dan arti Indonesianya
       const matchesSearch =
-        item.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.meaning.toLowerCase().includes(searchQuery.toLowerCase())
+        (item.kata_alos && item.kata_alos.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.kata_sedang && item.kata_sedang.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.kata_kasar && item.kata_kasar.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (item.arti_indonesia && item.arti_indonesia.toLowerCase().includes(searchQuery.toLowerCase()))
       
       if (searchQuery.trim() !== '') return matchesSearch
 
       if (selectedLetter !== '') {
-        return item.word.charAt(0).toUpperCase() === selectedLetter.toUpperCase()
+        const primary = getPrimaryWord(item)
+        return primary.charAt(0).toUpperCase() === selectedLetter.toUpperCase()
       }
 
       return true
@@ -372,21 +413,17 @@ export default function KamusPage() {
                   <div key={group.letter} className="flex flex-col">
                     <h2 className="text-2xl font-bold text-gray-900 mb-6">{group.letter}</h2>
                     
-                    {/* LOGIKA KRUSIAL: Hanya merender grid card jika admin sudah mengisi data */}
                     {group.items.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {group.items.map((item) => (
                           <VocabularyCard
                             key={item.id}
-                            word={item.word}
-                            level={item.level}
-                            meaning={item.meaning}
+                            item={item}
                             onClick={() => handleCardClick(item)}
                           />
                         ))}
                       </div>
                     ) : (
-                      // Jika data kosong, tidak ada card placeholder yang keluar (sesuai request)
                       <p className="text-sm text-gray-400 italic">Belum ada data kata.</p>
                     )}
                   </div>
@@ -403,9 +440,7 @@ export default function KamusPage() {
                     {filteredVocabulary.map((item) => (
                       <VocabularyCard
                         key={item.id}
-                        word={item.word}
-                        level={item.level}
-                        meaning={item.meaning}
+                        item={item}
                         onClick={() => handleCardClick(item)}
                       />
                     ))}

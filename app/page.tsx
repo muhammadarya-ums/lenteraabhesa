@@ -1,17 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BookOpen, History, Gamepad2 } from 'lucide-react'
 import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { getCookie, setCookie } from '@/lib/cookies'
 
-// 1. COMPONENT: Navbar (Sudah Fix Navigasi)
+// 1. COMPONENT: Navbar
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
-  // Mapping menu sesuai dengan struktur folder di image_b368c4.png
   const menuItems = [
     { name: 'Beranda', path: '/' },
     { name: 'Kamus', path: '/kamus' },
@@ -23,21 +24,19 @@ const Navbar = () => {
   return (
     <nav className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        {/* Logo */}
         <div className="flex items-center">
           <Link href="/">
             <Image src="/logo.png" alt="Lentera Abhesa" width={100} height={50} priority className="cursor-pointer" />
           </Link>
         </div>
 
-        {/* Desktop Menu */}
         <div className="hidden md:flex gap-6">
           {menuItems.map((item) => {
             const isActive = pathname === item.path
             return (
-              <Link 
-                key={item.name} 
-                href={item.path} 
+              <Link
+                key={item.name}
+                href={item.path}
                 className={`text-sm font-semibold transition-colors ${
                   isActive ? 'text-[#005C43]' : 'text-gray-700 hover:text-[#005C43]'
                 }`}
@@ -48,30 +47,27 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* Right Button (Desktop Only) */}
-        <Link 
-  href="/dukungkami" 
-  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
->
-  Dukung Kami
-</Link>
+        <Link
+          href="/dukungkami"
+          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
+        >
+          Dukung Kami
+        </Link>
 
-        {/* Hamburger Icon (Mobile) */}
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? '✕' : '☰'}
         </button>
       </div>
 
-      {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
           {menuItems.map((item) => {
             const isActive = pathname === item.path
             return (
-              <Link 
-                key={item.name} 
-                href={item.path} 
-                onClick={() => setIsMobileMenuOpen(false)} 
+              <Link
+                key={item.name}
+                href={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={`text-left font-semibold transition-colors ${
                   isActive ? 'text-[#005C43]' : 'text-gray-700'
                 }`}
@@ -80,12 +76,12 @@ const Navbar = () => {
               </Link>
             )
           })}
-          <Link 
-  href="/dukungkami" 
-  className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
->
-  Dukung Kami
-</Link>
+          <Link
+            href="/dukungkami"
+            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+          >
+            Dukung Kami
+          </Link>
         </div>
       )}
     </nav>
@@ -93,16 +89,23 @@ const Navbar = () => {
 }
 
 // 2. COMPONENT: Hero Section
-const HeroSection = () => (
+const HeroSection = ({
+  totalKamus,
+  totalSejarah,
+  totalPengunjung,
+}: {
+  totalKamus: number | string
+  totalSejarah: number | string
+  totalPengunjung: number | string
+}) => (
   <section className="w-full px-8 py-16 bg-white">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        {/* Left Content */}
         <div className="flex flex-col justify-center">
           <h1 className="text-5xl md:text-6xl font-extrabold text-[#005C43] leading-tight mb-6">
             Menjaga Bahasa, Merawat Identitas
           </h1>
-          
+
           <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-2">
             Platform digital untuk melestarikan bahasa dan sastra
           </p>
@@ -110,24 +113,22 @@ const HeroSection = () => (
             Pulau Bawean, memahami dan bangga menjadi bagian dari Pulau Bawean.
           </p>
 
-          {/* Statistics */}
           <div className="grid grid-cols-3 gap-6">
             <div className="flex flex-col items-start">
-              <p className="text-4xl font-extrabold text-[#005C43]">312</p>
+              <p className="text-4xl font-extrabold text-[#005C43] animate-pulse-once">{totalKamus}</p>
               <p className="text-sm text-gray-700 mt-1">Total Kosakata</p>
             </div>
             <div className="flex flex-col items-start">
-              <p className="text-4xl font-extrabold text-[#005C43]">11</p>
+              <p className="text-4xl font-extrabold text-[#005C43] animate-pulse-once">{totalSejarah}</p>
               <p className="text-sm text-gray-700 mt-1">Artikel Sejarah</p>
             </div>
             <div className="flex flex-col items-start">
-              <p className="text-4xl font-extrabold text-[#005C43]">2,009</p>
+              <p className="text-4xl font-extrabold text-[#005C43] animate-pulse-once">{totalPengunjung}</p>
               <p className="text-sm text-gray-700 mt-1">Total Pengunjung</p>
             </div>
           </div>
         </div>
 
-        {/* Right Illustration */}
         <div className="flex items-center justify-center h-83 rounded-3xl">
           <Image
             src="/image2.png"
@@ -147,76 +148,37 @@ const FeaturesSection = () => (
   <section className="w-full px-8 py-16 bg-white">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Kamus Digital */}
         <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-  {/* Wadah Lingkaran Gambar */}
-  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-    <Image 
-      src="/book.png" 
-      alt="Kamus Digital" 
-      width={32} 
-      height={32} 
-      className="object-contain"
-    />
-  </div>
-  
-  {/* Judul & Deskripsi */}
-  <h3 className="text-xl font-bold text-[#005C43] mb-2">Kamus Digital</h3>
-  <p className="text-sm text-gray-700">Cari dan pelajari kosakata bawean</p>
-</div>
+          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+            <Image src="/book.png" alt="Kamus Digital" width={32} height={32} className="object-contain" />
+          </div>
+          <h3 className="text-xl font-bold text-[#005C43] mb-2">Kamus Digital</h3>
+          <p className="text-sm text-gray-700">Cari dan pelajari kosakata bawean</p>
+        </div>
 
-        {/* Sejarah */}
         <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-  {/* Wadah Lingkaran Gambar */}
-  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-    <Image 
-      src="/archive-book.png" 
-      alt="Sejarah" 
-      width={32} 
-      height={32} 
-      className="object-contain"
-    />
-  </div>
-  
-  {/* Judul & Deskripsi */}
-  <h3 className="text-xl font-bold text-[#005C43] mb-2">Sejarah</h3>
-  <p className="text-sm text-gray-700">Telusuri asal-usul dan  ragam halus abhesa</p>
-</div>
-{/* Seksologi Bahasa */}
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-  {/* Wadah Lingkaran Gambar */}
-  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-    <Image 
-      src="/teacher.png" 
-      alt="Belajar Bahasa" 
-      width={32} 
-      height={32} 
-      className="object-contain"
-    />
-  </div>
-  
-  {/* Judul & Deskripsi */}
-  <h3 className="text-xl font-bold text-[#005C43] mb-2">Belajar Bahasa</h3>
-  <p className="text-sm text-gray-700">Belajar seru dan interaktif bahasa halus</p>
-</div>
+          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+            <Image src="/archive-book.png" alt="Sejarah" width={32} height={32} className="object-contain" />
+          </div>
+          <h3 className="text-xl font-bold text-[#005C43] mb-2">Sejarah</h3>
+          <p className="text-sm text-gray-700">Telusuri asal-usul dan ragam halus abhesa</p>
+        </div>
 
-        {/* Game */}
         <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-  {/* Wadah Lingkaran Gambar */}
-  <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-    <Image 
-      src="/game1.png" 
-      alt="Game" 
-      width={32} 
-      height={32} 
-      className="object-contain"
-    />
-  </div>
-  
-  {/* Judul & Deskripsi */}
-  <h3 className="text-xl font-bold text-[#005C43] mb-2">Game</h3>
-  <p className="text-sm text-gray-700">Selesaikan semua tantangan seru</p>
-</div>
+          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+            <Image src="/teacher.png" alt="Belajar Bahasa" width={32} height={32} className="object-contain" />
+          </div>
+          <h3 className="text-xl font-bold text-[#005C43] mb-2">Belajar Bahasa</h3>
+          <p className="text-sm text-gray-700">Belajar seru dan interaktif bahasa halus</p>
+        </div>
+
+        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
+          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
+            <Image src="/game1.png" alt="Game" width={32} height={32} className="object-contain" />
+          </div>
+          <h3 className="text-xl font-bold text-[#005C43] mb-2">Game</h3>
+          <p className="text-sm text-gray-700">Selesaikan semua tantangan seru</p>
+        </div>
       </div>
     </div>
   </section>
@@ -226,55 +188,32 @@ const FeaturesSection = () => (
 const WhySection = () => (
   <section className="w-full px-8 py-16 bg-white">
     <div className="max-w-7xl mx-auto">
-      
-      {/* 1. Bagian Header (Judul & Deskripsi kini sudah terpisah dengan benar) */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-12">
-        {/* Sisi Kiri */}
         <h2 className="text-4xl md:text-5xl font-extrabold text-[#005C43] text-left max-w-sm leading-tight">
           Mengapa Lentera Abhesa?
         </h2>
-        {/* Sisi Kanan */}
         <p className="text-gray-700 text-lg text-left max-w-xl leading-relaxed md:pt-2">
           Terbuka untuk semua pelajar, masyarakat dan semua kalangan dimanapun berada untuk belajar dan melestarikan ragam halus abhesa Bawean
         </p>
       </div>
 
-      {/* 2. Bento Grid (Menggunakan struktur kolom agar mendapatkan efek naik-turun) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
-        
-        {/* KOLOM 1: Mengambil 2 Kolom (Kiri) */}
         <div className="md:col-span-2 flex flex-col gap-4">
-          {/* Kartu: Melestarikan Bahasa */}
           <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-[240px] flex flex-col justify-start">
             <h3 className="text-3xl font-extrabold mb-4">Melestarikan Bahasa</h3>
             <p className="text-base text-gray-100 leading-relaxed">
               Menangani bahasa halus melalui teknologi digital untuk menjangkau lebih banyak generasi muda
             </p>
           </div>
-          {/* Kartu: Foto Fauna */}
           <div className="rounded-3xl overflow-hidden bg-gray-200 h-[320px] relative">
-            <Image 
-              src="/rusa.png" 
-              alt="Foto Fauna Bawean"
-              fill
-              className="object-cover"
-            />
+            <Image src="/rusa.png" alt="Foto Fauna Bawean" fill className="object-cover" />
           </div>
         </div>
 
-        {/* KOLOM 2: Mengambil 1 Kolom (Tengah) */}
         <div className="md:col-span-1 flex flex-col gap-4">
-          {/* Kartu: Foto Rumah */}
           <div className="rounded-3xl overflow-hidden bg-gray-200 h-[340px] relative">
-            <Image 
-              src="/rumah.png" 
-              alt="Foto Rumah Bawean"
-              fill
-              className="object-cover"
-              priority 
-            />
+            <Image src="/rumah.png" alt="Foto Rumah Bawean" fill className="object-cover" priority />
           </div>
-          {/* Kartu: Edukasi Interaktif */}
           <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-[220px] flex flex-col justify-start">
             <h3 className="text-2xl font-extrabold mb-3">Edukasi Interaktif</h3>
             <p className="text-sm text-gray-100 leading-relaxed">
@@ -283,9 +222,7 @@ const WhySection = () => (
           </div>
         </div>
 
-        {/* KOLOM 3: Mengambil 1 Kolom Full Tinggi (Kanan) */}
         <div className="md:col-span-1 flex flex-col">
-          {/* Kartu: Budaya Pulau Bawean */}
           <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-start h-full min-h-[300px]">
             <h3 className="text-2xl font-extrabold mb-4">Budaya Pulau Bawean</h3>
             <p className="text-base text-gray-100 leading-relaxed">
@@ -293,7 +230,6 @@ const WhySection = () => (
             </p>
           </div>
         </div>
-
       </div>
     </div>
   </section>
@@ -312,8 +248,8 @@ const CTASection = () => (
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link 
-            href="/dukungkami" 
+          <Link
+            href="/dukungkami"
             className="px-8 py-3 rounded-full bg-white text-[#005C43] font-bold hover:bg-gray-100 transition-colors"
           >
             Dukung Kami
@@ -327,7 +263,7 @@ const CTASection = () => (
   </section>
 )
 
-// 6. COMPONENT: Footer (Sudah Fix Navigasi)
+// 6. COMPONENT: Footer
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8">
     <div className="max-w-7xl mx-auto">
@@ -337,7 +273,7 @@ const Footer = () => (
             <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
           </div>
           <p className="text-sm text-gray-700 leading-relaxed">
-           Platform digital untuk melestarikan bahasa dan sastra Bawean
+            Platform digital untuk melestarikan bahasa dan sastra Bawean
           </p>
         </div>
 
@@ -378,10 +314,69 @@ const Footer = () => (
 
 // MAIN EXPORT
 export default function Page() {
+  const [totalKamus, setTotalKamus] = useState<number | string>('...')
+  const [totalSejarah, setTotalSejarah] = useState<number | string>('...')
+  const [totalPengunjung, setTotalPengunjung] = useState<number | string>('...')
+
+  useEffect(() => {
+    // --- 1. Fetch stats dari Supabase ---
+    const fetchStats = async () => {
+      try {
+        const { count: countKamus } = await supabase
+          .from('kamus')
+          .select('*', { count: 'exact', head: true })
+        if (countKamus !== null) setTotalKamus(countKamus)
+
+        const { count: countSejarah } = await supabase
+          .from('sejarah')
+          .select('*', { count: 'exact', head: true })
+        if (countSejarah !== null) setTotalSejarah(countSejarah)
+      } catch (error) {
+        console.error('Gagal mengambil data statistik:', error)
+        setTotalKamus(312)
+        setTotalSejarah(11)
+      }
+    }
+
+    // --- 2. Visitor Counter via API Route proxy (bebas CORS) ---
+    const handleVisitorCount = async () => {
+      try {
+        const hasVisited = getCookie('lentera_visited')
+
+        // 'up' untuk pengunjung baru, 'read' untuk yang sudah pernah kunjungi
+        const action = hasVisited ? 'read' : 'up'
+
+        const res = await fetch(`/api/visitors?action=${action}`)
+
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+
+        const data = await res.json()
+
+        if (data?.count !== undefined) {
+          // Set cookie SETELAH berhasil increment
+          if (!hasVisited) {
+            setCookie('lentera_visited', '1', 24)
+          }
+          setTotalPengunjung(data.count.toLocaleString('id-ID'))
+        }
+      } catch (error) {
+        console.error('Gagal mengambil data pengunjung:', error)
+        setTotalPengunjung('2.009')
+      }
+    }
+
+    fetchStats()
+    handleVisitorCount()
+  }, [])
+
   return (
     <main className="w-full bg-white">
       <Navbar />
-      <HeroSection />
+      <HeroSection
+        totalKamus={totalKamus}
+        totalSejarah={totalSejarah}
+        totalPengunjung={totalPengunjung}
+      />
       <FeaturesSection />
       <WhySection />
       <CTASection />
