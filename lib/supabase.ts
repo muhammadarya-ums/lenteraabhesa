@@ -7,5 +7,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase env variables')
 }
 
-// Eksport instance supabase agar bisa di-import di page mana saja
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

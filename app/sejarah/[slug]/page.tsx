@@ -3,29 +3,27 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, usePathname } from 'next/navigation'
-import { ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronRight, Loader2, Calendar, User } from 'lucide-react'
 import Image from "next/image"
 import { supabase } from '@/lib/supabase'
 
 // ==========================================
-// 1. INTERFACE (Pastikan sama dengan struktur DB)
+// 1. INTERFACE (Disesuaikan dengan DB & Admin Baru)
 // ==========================================
-interface ContentSection {
-  section: string
-  text: string
-  bullets?: string[]
-}
-
 interface SejarahArticle {
-  id: number
+  id: string | number
   slug: string
-  title: string
-  description: string
-  imageUrl: string
-  content: ContentSection[]
+  judul: string
+  kategori: string
+  penulis: string
+  konten: string
+  gambar_url: string | null
+  created_at: string
 }
 
-// 1. COMPONENT: Navbar
+// ==========================================
+// 2. COMPONENT: Navbar
+// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -49,7 +47,7 @@ const Navbar = () => {
 
         <div className="hidden md:flex gap-6">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
             return (
               <Link
                 key={item.name}
@@ -79,7 +77,7 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
             return (
               <Link
                 key={item.name}
@@ -104,8 +102,10 @@ const Navbar = () => {
     </nav>
   )
 }
-// ... (Komponen Navbar dan Footer tetap sama, tidak perlu diubah) ...
-// 6. COMPONENT: Footer
+
+// ==========================================
+// 3. COMPONENT: Footer
+// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8">
     <div className="max-w-7xl mx-auto">
@@ -153,12 +153,13 @@ const Footer = () => (
     </div>
   </footer>
 )
+
 // ==========================================
-// 2. MAIN DEFAULT EXPORT
+// 4. MAIN DEFAULT EXPORT
 // ==========================================
 export default function ArticleDetailPage() {
   const params = useParams()
-  const slug = params.slug as string
+  const slug = params?.slug as string
   const [article, setArticle] = useState<SejarahArticle | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -173,7 +174,7 @@ export default function ArticleDetailPage() {
         .single() // Mengambil satu data yang slug-nya cocok
 
       if (data) {
-        setArticle(data)
+        setArticle(data as SejarahArticle)
       } else {
         console.error("Error fetching article:", error)
       }
@@ -183,11 +184,24 @@ export default function ArticleDetailPage() {
     if (slug) fetchArticle()
   }, [slug])
 
+  // Helper Format Tanggal
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  }
+
   // UI Loading State
   if (loading) {
     return (
-      <main className="w-full bg-white min-h-screen flex flex-col justify-between items-center justify-center">
-         <Loader2 className="w-10 h-10 animate-spin text-[#00664B]" />
+      <main className="w-full bg-white min-h-screen flex flex-col justify-between">
+        <Navbar />
+        <div className="flex-1 flex justify-center items-center">
+          <Loader2 className="w-10 h-10 animate-spin text-[#00664B]" />
+        </div>
+        <Footer />
       </main>
     )
   }
@@ -218,24 +232,24 @@ export default function ArticleDetailPage() {
       <div>
         <Navbar />
 
-        {/* Breadcrumb */}
+        {/* Breadcrumb (Desain Original) */}
         <section className="px-8 py-6 border-b border-gray-200">
           <div className="max-w-4xl mx-auto">
-             <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Link href="/sejarah" className="hover:text-[#00664B] transition-colors">Sejarah</Link>
-                <ChevronRight className="w-4 h-4" />
-                <span className="text-gray-900 font-medium">{article.title}</span>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Link href="/sejarah" className="hover:text-[#00664B] transition-colors">Sejarah</Link>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-gray-900 font-medium line-clamp-1">{article.judul}</span>
             </div>
           </div>
         </section>
 
-        {/* Banner Image */}
+        {/* Banner Image (Desain Original) */}
         <section className="px-8 py-8">
           <div className="max-w-4xl mx-auto">
             <div className="w-full h-64 md:h-[400px] rounded-2xl bg-gray-50 overflow-hidden relative border border-gray-100 shadow-sm">
               <Image 
-                src={article.imageUrl || '/placeholder.png'} 
-                alt={article.title}
+                src={article.gambar_url || '/placeholder.png'} 
+                alt={article.judul}
                 fill
                 className="object-cover"
                 sizes="(max-w-4xl) 100vw, 896px"
@@ -246,32 +260,35 @@ export default function ArticleDetailPage() {
         </section>
 
         {/* Article Content */}
-        <section className="px-8 py-12">
+        <section className="px-8 py-4 pb-16">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-[#00664B] mb-6">
-              {article.title}
-            </h1>
-            <p className="text-gray-700 text-lg leading-relaxed mb-10">
-              {article.description}
-            </p>
+            {/* Meta Info Tambahan */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-xs font-bold bg-[#EBF2EF] text-[#005C43] px-3 py-1 rounded-md uppercase tracking-wider">
+                {article.kategori || 'Umum'}
+              </span>
+            </div>
 
-            <div className="space-y-10">
-              {article.content && article.content.map((section, idx) => (
-                <div key={idx} className="space-y-4">
-                  <h2 className="text-2xl font-extrabold text-gray-900">{section.section}</h2> 
-                  {section.text && <p className="text-gray-700 leading-relaxed">{section.text}</p>}
-                  {section.bullets && (
-                    <ul className="space-y-3 ml-6">
-                      {section.bullets.map((bullet, bulletIdx) => (
-                        <li key={bulletIdx} className="text-gray-700 leading-relaxed flex gap-3">
-                          <span className="text-[#00664B] font-bold shrink-0 mt-1">•</span>
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+            <h1 className="text-4xl md:text-5xl font-extrabold text-[#00664B] mb-6 leading-tight">
+              {article.judul}
+            </h1>
+
+            {/* Info Penulis & Tanggal */}
+            <div className="flex items-center gap-4 text-sm text-gray-500 mb-10 pb-6 border-b border-gray-100">
+              <span className="flex items-center gap-1.5 font-medium text-gray-700">
+                <User className="w-4 h-4" /> {article.penulis || 'Admin Lentera'}
+              </span>
+              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" /> {formatDate(article.created_at)}
+              </span>
+            </div>
+
+            {/* Render Konten Teks 
+                whitespace-pre-wrap membuat enter/paragraf dari DB dirender ke baris baru
+            */}
+            <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {article.konten}
             </div>
           </div>
         </section>
