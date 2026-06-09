@@ -263,57 +263,49 @@ const SupportSection = () => (
   </section>
 )
 
-// ==========================================
-// 6. COMPONENT: Footer (UI ASLI LU)
-// ==========================================
 const Footer = () => (
-  <footer className="w-full bg-[#EBF2EF] pt-16 pb-6">
-    <div className="max-w-6xl mx-auto px-6">
-      <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1fr_1fr] gap-10 mb-16">
-        {/* Description Column */}
-        <div className="flex flex-col pr-4">
-          <Image src="/logo.png" alt="Lentera Abhesa" width={140} height={60} className="mb-4" priority />
-          <p className="text-[15px] text-black leading-relaxed">
-            Platform digital untuk<br />
-            melestarikan bahasa dan<br />
-            sastra Bawean
+  <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-12">
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 mb-4">
+            <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Platform digital untuk melestarikan bahasa dan sastra Bawean
           </p>
         </div>
 
-        {/* Navigasi Column */}
         <div className="flex flex-col">
-          <h4 className="font-bold text-black text-[15px] mb-4">Navigasi</h4>
-          <ul className="space-y-3 text-[15px] text-black">
-            <li><Link href="/kamus" className="hover:text-[#005C43]">Kamus</Link></li>
-            <li><Link href="/sejarah" className="hover:text-[#005C43]">Sejarah</Link></li>
-            <li><Link href="/game" className="hover:text-[#005C43]">Game</Link></li>
-            <li><Link href="/tentang-kami" className="hover:text-[#005C43]">Tentang Kami</Link></li>
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
+          <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
+            <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
+            <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
+            <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
+            <li><Link href="/game" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
           </ul>
         </div>
 
-        {/* Media Sosial Column */}
         <div className="flex flex-col">
-          <h4 className="font-bold text-black text-[15px] mb-4">Media Sosial</h4>
-          <ul className="space-y-3 text-[15px] text-black">
-            <li><a href="#" className="hover:text-[#005C43]">Instagram</a></li>
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+            <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+            <li><a href="#" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
           </ul>
         </div>
 
-        {/* Kontak Column */}
         <div className="flex flex-col">
-          <h4 className="font-bold text-black text-[15px] mb-4">Kontak</h4>
-          <ul className="space-y-3 text-[15px] text-black">
-            <li>Email :</li>
-            <li>Phone :</li>
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">Phone</a></li>
           </ul>
         </div>
       </div>
 
-      {/* Copyright Line */}
-      <div className="text-center pt-8 border-t border-gray-300/60">
-        <p className="text-[13px] text-gray-500">
-          © 2026 Lentera Abhesa · All rights reserved.
-        </p>
+      <div className="border-t border-gray-300 pt-6 text-center">
+        <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
       </div>
     </div>
   </footer>
