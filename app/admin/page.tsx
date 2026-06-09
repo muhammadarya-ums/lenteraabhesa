@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
     tebakGambarCount: 0,
     tebakKataCount: 0,
     susunKataCount: 0,
-    totalPlayers: 0
+    totalSesi: 0
   })
 
   const fetchKamus = async () => {
@@ -108,33 +108,28 @@ export default function AdminDashboardPage() {
         await fetchKamus()
         await fetchSejarah()
         
-        // Fetch pengunjung and total permainan lama
         const { count: countPengunjung } = await supabase.from('pengunjung').select('*', { count: 'exact', head: true })
-        const { count: countGame } = await supabase.from('permainan').select('*', { count: 'exact', head: true })
-        
         setTotalPengunjung(countPengunjung || 0)
-        setTotalGame(countGame || 0)
 
-        // Fetch Game Analytics Baru
-        const { data: gameStats, error: statError } = await supabase.from('game_analytics').select('game_name, session_id')
+        // BACA DARI TABEL 'permainan' SESUAI DATABASE KAMU
+        const { data: gameStats, error: statError } = await supabase.from('permainan').select('jenis_game')
         
         if (gameStats) {
-          const tebakGambar = gameStats.filter(g => g.game_name === 'tebak_gambar').length
-          const tebakKata = gameStats.filter(g => g.game_name === 'tebak_kata').length
-          const susunKata = gameStats.filter(g => g.game_name === 'susun_kata').length
-          
-          // Hitung player unik berdasarkan device_id / session_id
-          const uniquePlayers = new Set(gameStats.map(g => g.session_id)).size
+          // Konversi ke huruf kecil semua biar pencariannya aman
+          const tebakGambar = gameStats.filter(g => g.jenis_game?.toLowerCase().includes('gambar')).length
+          const tebakKata = gameStats.filter(g => g.jenis_game?.toLowerCase().includes('tebak_kata') || g.jenis_game?.toLowerCase().includes('tebak kata')).length
+          const susunKata = gameStats.filter(g => g.jenis_game?.toLowerCase().includes('susun')).length
 
           setAnalyticsGame({
             tebakGambarCount: tebakGambar,
             tebakKataCount: tebakKata,
             susunKataCount: susunKata,
-            totalPlayers: uniquePlayers
+            totalSesi: gameStats.length
           })
           
-          // Update total game keseluruhan dari metrik baru agar lebih akurat
           setTotalGame(gameStats.length)
+        } else if (statError) {
+          console.error("Error mengambil statistik game:", statError)
         }
 
       } catch (err) {
@@ -163,7 +158,7 @@ export default function AdminDashboardPage() {
 
         const [resPengunjung, resGame, resKamus] = await Promise.all([
           supabase.from('pengunjung').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
-          supabase.from('game_analytics').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
+          supabase.from('permainan').select('created_at').gte('created_at', startIso).lte('created_at', endIso), // UBAH KE permainan
           supabase.from('kamus').select('created_at').gte('created_at', startIso).lte('created_at', endIso)
         ])
 
@@ -189,6 +184,7 @@ export default function AdminDashboardPage() {
 
         const distributeData = (items: any[], keyName: 'Pengunjung' | 'Kamus' | 'Game') => {
           items.forEach(item => {
+            if(!item.created_at) return;
             const d = new Date(item.created_at)
             let matchIndex = 0
 
@@ -403,10 +399,10 @@ export default function AdminDashboardPage() {
               {/* SPESIFIK GAME ANALYTICS GRID */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                   <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#005C43]/10 text-[#005C43] rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">👥</div>
+                    <div className="w-12 h-12 bg-[#005C43]/10 text-[#005C43] rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">🎮</div>
                     <div>
-                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Pemain Unik</p>
-                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.totalPlayers} Orang</h3>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Total Sesi Game</p>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.totalSesi} Sesi</h3>
                     </div>
                   </div>
 
@@ -414,7 +410,7 @@ export default function AdminDashboardPage() {
                     <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">🖼️</div>
                     <div>
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tebak Gambar</p>
-                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.tebakGambarCount} Sesi</h3>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.tebakGambarCount} Kali</h3>
                     </div>
                   </div>
 
@@ -422,7 +418,7 @@ export default function AdminDashboardPage() {
                     <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">🧩</div>
                     <div>
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tebak Kata</p>
-                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.tebakKataCount} Sesi</h3>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.tebakKataCount} Kali</h3>
                     </div>
                   </div>
 
@@ -430,7 +426,7 @@ export default function AdminDashboardPage() {
                     <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">✨</div>
                     <div>
                       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Susun Kata</p>
-                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.susunKataCount} Sesi</h3>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.susunKataCount} Kali</h3>
                     </div>
                   </div>
               </div>
