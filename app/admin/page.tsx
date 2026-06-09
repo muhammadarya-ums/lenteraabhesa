@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error || !session) {
-          router.push('/login')
+          router.push('/admin/login')
           return
         }
         
