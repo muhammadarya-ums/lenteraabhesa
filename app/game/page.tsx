@@ -50,11 +50,11 @@ const Navbar = () => {
 
         {/* Right Button (Desktop Only) */}
         <Link 
-  href="/dukungkami" 
-  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
->
-  Dukung Kami
-</Link>
+          href="/dukungkami" 
+          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
+        >
+          Dukung Kami
+        </Link>
 
         {/* Hamburger Icon (Mobile) */}
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -81,11 +81,11 @@ const Navbar = () => {
             )
           })}
           <Link 
-  href="/dukungkami" 
-  className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
->
-  Dukung Kami
-</Link>
+            href="/dukungkami" 
+            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+          >
+            Dukung Kami
+          </Link>
         </div>
       )}
     </nav>
@@ -98,9 +98,9 @@ const Navbar = () => {
 interface GameCardProps {
   title: string
   description: string
-  imageSrc: string // Prop baru untuk file foto game
+  imageSrc: string
   href: string
-  isAvailable?: boolean // Kondisi game aktif atau Coming Soon
+  isAvailable?: boolean
 }
 
 const GameCard = ({ title, description, imageSrc, href, isAvailable = true }: GameCardProps) => {
@@ -126,11 +126,11 @@ const GameCard = ({ title, description, imageSrc, href, isAvailable = true }: Ga
       {/* Bagian Bawah: Tombol Status */}
       {isAvailable ? (
         <button className="w-full bg-[#005C43] text-white rounded-full py-3.5 font-bold text-base hover:opacity-95 transition-opacity">
-          Ayo Main →
+          Ayo Mulai →
         </button>
       ) : (
-        <button disabled className="w-full bg-[#F1F3F2] text-gray-400 rounded-full py-3.5 font-bold text-sm tracking-wider uppercase cursor-not-allowed">
-          COMING SOON
+        <button className="w-full bg-gray-400 text-white rounded-full py-3.5 font-bold text-base cursor-not-allowed">
+          Segera Hadir
         </button>
       )}
     </div>
@@ -228,22 +228,22 @@ export default function GamePage() {
               isAvailable={true}
             />
 
-            {/* 2. Tebak Kata (Coming Soon) */}
+            {/* 2. Tebak Kata (Sekarang Aktif!) */}
             <GameCard
               title="Tebak Kata"
               description="Tebak arti kata bahasa Bawean dengan tepat"
-              imageSrc="/tebakkata.png" // Taruh file fotomu di folder public/game-tebak-kata.png
+              imageSrc="/tebakkata.png" 
               href="/game/tebak-kata"
-              isAvailable={false}
+              isAvailable={true} 
             />
 
-            {/* 3. Susun Kata (Coming Soon) */}
+            {/* 3. Susun Kata (Sekarang Aktif!) */}
             <GameCard
               title="Susun Kata"
               description="Susun huruf acak menjadi kata bahas Bawean"
-              imageSrc="/susunkata.png" // Taruh file fotomu di folder public/game-susun-kata.png
+              imageSrc="/susunkata.png" 
               href="/game/susun-kata"
-              isAvailable={false}
+              isAvailable={true} 
             />
           </div>
         </div>

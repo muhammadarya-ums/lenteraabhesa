@@ -42,8 +42,6 @@ export default function AdminDashboardPage() {
   const [submitLoading, setSubmitLoading] = useState(false)
   const [adminEmail, setAdminEmail] = useState('')
   const [activeMenu, setActiveMenu] = useState('dashboard')
-  
-  // STATE BARU: Untuk kontrol buka/tutup menu di layar HP
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const [kamusList, setKamusList] = useState<KamusItem[]>([])
@@ -76,19 +74,25 @@ export default function AdminDashboardPage() {
   const [penulisArtikel, setPenulisArtikel] = useState('')
   const [coverFile, setCoverFile] = useState<File | null>(null)
 
+  const [analyticsGame, setAnalyticsGame] = useState({
+    tebakGambarCount: 0,
+    tebakKataCount: 0,
+    susunKataCount: 0,
+    totalPlayers: 0
+  })
+
   const fetchKamus = async () => {
-    const { data } = await supabase.from('kamus').select('*').order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('kamus').select('*').order('created_at', { ascending: false })
     if (data) setKamusList(data as KamusItem[])
+    if (error) console.error('Error fetching kamus:', error)
   }
 
   const fetchSejarah = async () => {
-    const { data } = await supabase.from('sejarah').select('*').order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('sejarah').select('*').order('created_at', { ascending: false })
     if (data) setSejarahList(data as SejarahItem[])
+    if (error) console.error('Error fetching sejarah:', error)
   }
 
-  // ==========================================
-  // BLOK INISIALISASI YANG TADI HILANG
-  // ==========================================
   useEffect(() => {
     const checkSessionAndInitData = async () => {
       try {
@@ -104,11 +108,34 @@ export default function AdminDashboardPage() {
         await fetchKamus()
         await fetchSejarah()
         
+        // Fetch pengunjung and total permainan lama
         const { count: countPengunjung } = await supabase.from('pengunjung').select('*', { count: 'exact', head: true })
         const { count: countGame } = await supabase.from('permainan').select('*', { count: 'exact', head: true })
         
         setTotalPengunjung(countPengunjung || 0)
         setTotalGame(countGame || 0)
+
+        // Fetch Game Analytics Baru
+        const { data: gameStats, error: statError } = await supabase.from('game_analytics').select('game_name, session_id')
+        
+        if (gameStats) {
+          const tebakGambar = gameStats.filter(g => g.game_name === 'tebak_gambar').length
+          const tebakKata = gameStats.filter(g => g.game_name === 'tebak_kata').length
+          const susunKata = gameStats.filter(g => g.game_name === 'susun_kata').length
+          
+          // Hitung player unik berdasarkan device_id / session_id
+          const uniquePlayers = new Set(gameStats.map(g => g.session_id)).size
+
+          setAnalyticsGame({
+            tebakGambarCount: tebakGambar,
+            tebakKataCount: tebakKata,
+            susunKataCount: susunKata,
+            totalPlayers: uniquePlayers
+          })
+          
+          // Update total game keseluruhan dari metrik baru agar lebih akurat
+          setTotalGame(gameStats.length)
+        }
 
       } catch (err) {
         console.error("Gagal inisialisasi Command Center:", err)
@@ -119,7 +146,6 @@ export default function AdminDashboardPage() {
 
     checkSessionAndInitData()
   }, [router])
-  // ==========================================
 
   useEffect(() => {
     const generateChartData = async () => {
@@ -127,7 +153,6 @@ export default function AdminDashboardPage() {
         let startIso: string;
         let endIso: string;
 
-        // Tentukan rentang waktu tarikan data
         if (analyticsPeriod === 'bulan') {
           startIso = new Date(selectedYear, 0, 1).toISOString()
           endIso = new Date(selectedYear, 11, 31, 23, 59, 59).toISOString()
@@ -138,7 +163,7 @@ export default function AdminDashboardPage() {
 
         const [resPengunjung, resGame, resKamus] = await Promise.all([
           supabase.from('pengunjung').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
-          supabase.from('permainan').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
+          supabase.from('game_analytics').select('created_at').gte('created_at', startIso).lte('created_at', endIso),
           supabase.from('kamus').select('created_at').gte('created_at', startIso).lte('created_at', endIso)
         ])
 
@@ -149,10 +174,9 @@ export default function AdminDashboardPage() {
         let labels: string[] = []
         let template: any[] = []
 
-        // PERBAIKAN LOGIKA LABEL (Biar sesuai kalender)
         if (analyticsPeriod === 'hari') {
           const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate()
-          labels = Array.from({length: daysInMonth}, (_, i) => `${i + 1}`) // Tanggal 1 sampai akhir bulan
+          labels = Array.from({length: daysInMonth}, (_, i) => `${i + 1}`)
         } else if (analyticsPeriod === 'bulan') {
           labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des']
         } else if (analyticsPeriod === 'minggu') {
@@ -163,14 +187,13 @@ export default function AdminDashboardPage() {
 
         template = labels.map(label => ({ name: label, Pengunjung: 0, Kamus: 0, Game: 0 }))
 
-        // Distribusi data yang udah ditarik ke template
         const distributeData = (items: any[], keyName: 'Pengunjung' | 'Kamus' | 'Game') => {
           items.forEach(item => {
             const d = new Date(item.created_at)
             let matchIndex = 0
 
             if (analyticsPeriod === 'jam') matchIndex = d.getHours()
-            else if (analyticsPeriod === 'hari') matchIndex = d.getDate() - 1 // Index 0 buat tanggal 1
+            else if (analyticsPeriod === 'hari') matchIndex = d.getDate() - 1 
             else if (analyticsPeriod === 'minggu') matchIndex = Math.min(Math.floor((d.getDate() - 1) / 7), 4)
             else if (analyticsPeriod === 'bulan') matchIndex = d.getMonth()
 
@@ -281,9 +304,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="w-full min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row font-sans text-gray-900">
       
-      {/* =========================================
-          MOBILE HEADER (KHUSUS LAYAR HP)
-          ========================================= */}
+      {/* MOBILE HEADER */}
       <div className="md:hidden w-full bg-white border-b border-gray-100 p-4 flex justify-between items-center sticky top-0 z-50">
         <h2 className="text-[18px] font-black text-[#005C43] tracking-tight">LENTERA ADMIN</h2>
         <button 
@@ -294,9 +315,7 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
-      {/* =========================================
-          SIDEBAR (Desktop statis, Mobile Drawer)
-          ========================================= */}
+      {/* SIDEBAR */}
       <aside className={`
         fixed md:sticky top-0 left-0 h-screen w-[280px] bg-white border-r border-gray-100 p-6 shadow-xl md:shadow-none z-40 transition-transform duration-300 ease-in-out flex flex-col justify-between
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -326,7 +345,7 @@ export default function AdminDashboardPage() {
                 key={menu.id} 
                 onClick={() => {
                   setActiveMenu(menu.id)
-                  setIsMobileMenuOpen(false) // Tutup drawer hp otomatis setelah di klik
+                  setIsMobileMenuOpen(false) 
                 }} 
                 className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === menu.id ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
               >
@@ -340,7 +359,7 @@ export default function AdminDashboardPage() {
         </button>
       </aside>
 
-      {/* Overlay Hitam Transparan buat Mobile Drawer */}
+      {/* Overlay Mobile */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/20 z-30 md:hidden"
@@ -348,9 +367,7 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      {/* =========================================
-          MAIN CONTENT VIEWPORT
-          ========================================= */}
+      {/* MAIN CONTENT VIEWPORT */}
       <main className="flex-1 flex flex-col h-[calc(100vh-64px)] md:h-screen overflow-y-auto w-full">
         <header className="bg-white border-b border-gray-100 px-6 md:px-10 py-5 md:py-6 sticky top-0 z-10 hidden md:block">
           <h1 className="text-2xl font-bold text-gray-900 capitalize">
@@ -369,7 +386,7 @@ export default function AdminDashboardPage() {
                   { label: 'Total Kosakata', value: kamusList.length, icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                   { label: 'Artikel Terbit', value: sejarahList.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
                   { label: 'Total Pengunjung', value: totalPengunjung, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-                  { label: 'Game Dimainkan', value: totalGame, icon: Gamepad2, color: 'text-orange-600', bg: 'bg-orange-50' },
+                  { label: 'Total Game Dimainkan', value: totalGame, icon: Gamepad2, color: 'text-orange-600', bg: 'bg-orange-50' },
                 ].map((stat, i) => (
                   <div key={i} className="bg-white p-5 md:p-6 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
                     <div className={`w-12 h-12 md:w-14 md:h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shrink-0`}>
@@ -381,6 +398,41 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* SPESIFIK GAME ANALYTICS GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                  <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-[#005C43]/10 text-[#005C43] rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">👥</div>
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Pemain Unik</p>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.totalPlayers} Orang</h3>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">🖼️</div>
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tebak Gambar</p>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.tebakGambarCount} Sesi</h3>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">🧩</div>
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tebak Kata</p>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.tebakKataCount} Sesi</h3>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0">✨</div>
+                    <div>
+                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Susun Kata</p>
+                      <h3 className="text-[20px] font-black text-gray-900 mt-1 leading-none">{analyticsGame.susunKataCount} Sesi</h3>
+                    </div>
+                  </div>
               </div>
 
               {/* RESPONSIVE CHART PANEL */}

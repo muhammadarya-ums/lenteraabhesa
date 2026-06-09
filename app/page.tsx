@@ -6,7 +6,6 @@ import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { getCookie, setCookie } from '@/lib/cookies'
 
 // 1. COMPONENT: Navbar
 const Navbar = () => {
@@ -319,7 +318,7 @@ export default function Page() {
   const [totalPengunjung, setTotalPengunjung] = useState<number | string>('...')
 
   useEffect(() => {
-    // --- 1. Fetch stats dari Supabase ---
+    // --- 1. Fetch stats murni dari Supabase ---
     const fetchStats = async () => {
       try {
         const { count: countKamus } = await supabase
@@ -333,35 +332,41 @@ export default function Page() {
         if (countSejarah !== null) setTotalSejarah(countSejarah)
       } catch (error) {
         console.error('Gagal mengambil data statistik:', error)
-        setTotalKamus(312)
-        setTotalSejarah(11)
       }
     }
 
-    // --- 2. Visitor Counter via API Route proxy (bebas CORS) ---
+    // --- 2. SISTEM PENGUNJUNG MURNI SUPABASE (ANTI SPAM) ---
     const handleVisitorCount = async () => {
       try {
-        const hasVisited = getCookie('lentera_visited')
+        // Ambil tanggal hari ini sbg validator (Format: YYYY-MM-DD)
+        const today = new Date().toISOString().split('T')[0] 
+        const lastVisit = localStorage.getItem('lentera_last_visit')
 
-        // 'up' untuk pengunjung baru, 'read' untuk yang sudah pernah kunjungi
-        const action = hasVisited ? 'read' : 'up'
-
-        const res = await fetch(`/api/visitors?action=${action}`)
-
-        if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
-
-        const data = await res.json()
-
-        if (data?.count !== undefined) {
-          // Set cookie SETELAH berhasil increment
-          if (!hasVisited) {
-            setCookie('lentera_visited', '1', 24)
-          }
-          setTotalPengunjung(data.count.toLocaleString('id-ID'))
+        // Jika belum ada riwayat kunjungan HARI INI, catat ke database
+        if (lastVisit !== today) {
+           const { error: insertError } = await supabase
+            .from('pengunjung')
+            .insert([{ ip_address: navigator.userAgent }])  
+           
+           if (!insertError) {
+             // Kunci di lokal, mencegah penambahan ganda jika di-refresh
+             localStorage.setItem('lentera_last_visit', today)
+           } else {
+             console.error("Gagal mencatat kunjungan ke database:", insertError)
+           }
         }
+
+        // Tampilkan total akumulatif ke layar Landing Page
+        const { count, error: countError } = await supabase
+          .from('pengunjung')
+          .select('*', { count: 'exact', head: true })
+        
+        if (countError) throw countError
+        if (count !== null) setTotalPengunjung(count.toLocaleString('id-ID'))
+
       } catch (error) {
-        console.error('Gagal mengambil data pengunjung:', error)
-        setTotalPengunjung('2.009')
+        console.error('Sistem pengunjung error:', error)
+        setTotalPengunjung('...')
       }
     }
 
