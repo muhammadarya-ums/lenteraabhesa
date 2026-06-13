@@ -1,13 +1,29 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { BookOpen, History, Gamepad2 } from 'lucide-react'
-import Image from "next/image"
+import React, { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { ChevronLeft, ChevronRight, Search, Loader2 } from 'lucide-react'
+import Image from "next/image"
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-// 1. COMPONENT: Navbar (Tetap Sama)
+// ==========================================
+// 1. INTERFACE DATA (DISESUAIKAN DENGAN DATABASE & ADMIN)
+// ==========================================
+interface SejarahArticle {
+  id: string | number
+  slug: string
+  judul: string          // Mengganti title -> judul
+  kategori: string       // Mengganti category -> kategori
+  penulis: string        // Mengganti author -> penulis
+  konten: string         // Mengganti content -> konten
+  gambar_url: string | null // Mengganti imageUrl -> gambar_url
+  created_at: string     // Mengganti createdAt -> created_at
+}
+
+// ==========================================
+// 3. COMPONENT: Navbar (Identik dengan aslinya)
+// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -31,11 +47,11 @@ const Navbar = () => {
 
         <div className="hidden md:flex gap-6">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
             return (
-              <Link
-                key={item.name}
-                href={item.path}
+              <Link 
+                key={item.name} 
+                href={item.path} 
                 className={`text-sm font-semibold transition-colors ${
                   isActive ? 'text-[#005C43]' : 'text-gray-700 hover:text-[#005C43]'
                 }`}
@@ -46,9 +62,9 @@ const Navbar = () => {
           })}
         </div>
 
-        <Link
-          href="/dukungkami"
-          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
+        <Link 
+          href="/dukungkami" 
+          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity"
         >
           Dukung Kami
         </Link>
@@ -59,14 +75,14 @@ const Navbar = () => {
       </div>
 
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
+        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
             return (
-              <Link
-                key={item.name}
-                href={item.path}
-                onClick={() => setIsMobileMenuOpen(false)}
+              <Link 
+                key={item.name} 
+                href={item.path} 
+                onClick={() => setIsMobileMenuOpen(false)} 
                 className={`text-left font-semibold transition-colors ${
                   isActive ? 'text-[#005C43]' : 'text-gray-700'
                 }`}
@@ -75,8 +91,8 @@ const Navbar = () => {
               </Link>
             )
           })}
-          <Link
-            href="/dukungkami"
+          <Link 
+            href="/dukungkami" 
             className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
           >
             Dukung Kami
@@ -87,167 +103,56 @@ const Navbar = () => {
   )
 }
 
-// 2. COMPONENT: Hero Section (Tetap Sama)
-const HeroSection = ({ totalKamus, totalSejarah, totalPengunjung }: any) => (
-  <section className="w-full px-8 py-16 bg-white">
-    <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        <div className="flex flex-col justify-center">
-          <h1 className="text-5xl md:text-6xl font-extrabold text-[#005C43] leading-tight mb-6">
-            Menjaga Bahasa, Merawat Identitas
-          </h1>
-          <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-2">
-            Platform digital untuk melestarikan bahasa dan sastra
-          </p>
-          <p className="text-base md:text-lg text-gray-700 leading-relaxed mb-10">
-            Pulau Bawean, memahami dan bangga menjadi bagian dari Pulau Bawean.
-          </p>
-          <div className="grid grid-cols-3 gap-6">
-            <div className="flex flex-col items-start">
-              <p className="text-4xl font-extrabold text-[#005C43] animate-pulse-once">{totalKamus}</p>
-              <p className="text-sm text-gray-700 mt-1">Total Kosakata</p>
-            </div>
-            <div className="flex flex-col items-start">
-              <p className="text-4xl font-extrabold text-[#005C43] animate-pulse-once">{totalSejarah}</p>
-              <p className="text-sm text-gray-700 mt-1">Artikel Sejarah</p>
-            </div>
-            <div className="flex flex-col items-start">
-              <p className="text-4xl font-extrabold text-[#005C43] animate-pulse-once">{totalPengunjung}</p>
-              <p className="text-sm text-gray-700 mt-1">Total Pengunjung</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-center h-83 rounded-3xl">
-          <Image src="/image2.png" alt="" width={340} height={70} priority />
-        </div>
-      </div>
+// ==========================================
+// 4. COMPONENT: SejarahListItem (DIPERBARUI TOTAL)
+// ==========================================
+const SejarahListItem = ({ article }: { article: SejarahArticle }) => (
+  <div className="bg-white border border-gray-100 rounded-[28px] p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center transition-all hover:shadow-md">
+    <div className="shrink-0 w-full md:w-56 h-36 rounded-2xl bg-gray-50 overflow-hidden relative border border-gray-100">
+      <Image 
+        src={article.gambar_url || '/placeholder.png'} 
+        alt={article.judul || 'Cover Artikel'}
+        fill
+        className="object-cover"
+        sizes="(max-w-7xl) 100vw, 224px"
+        priority
+      />
     </div>
-  </section>
-)
 
-// 3. COMPONENT: Features Section (Tetap Sama)
-const FeaturesSection = () => (
-  <section className="w-full px-8 py-16 bg-white">
-    <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/book.png" alt="Kamus Digital" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Kamus Digital</h3>
-          <p className="text-sm text-gray-700">Cari dan pelajari kosakata bawean</p>
+    <div className="flex-1 flex flex-col justify-between w-full py-1">
+      <div>
+        <div className="flex items-center gap-3 mb-2 flex-wrap">
+          <span className="text-[10px] font-extrabold bg-[#EBF2EF] text-[#005C43] tracking-wider px-2.5 py-1 rounded-md uppercase">
+            {article.kategori || 'Umum'}
+          </span>
+          <span className="text-xs text-gray-400 font-medium">
+            Oleh: <span className="text-gray-600 font-semibold">{article.penulis || 'Admin'}</span>
+          </span>
         </div>
-
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/archive-book.png" alt="Sejarah" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Sejarah</h3>
-          <p className="text-sm text-gray-700">Telusuri asal-usul dan ragam halus abhesa</p>
-        </div>
-
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/teacher.png" alt="Belajar Bahasa" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Belajar Bahasa</h3>
-          <p className="text-sm text-gray-700">Belajar seru dan interaktif bahasa halus</p>
-        </div>
-
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/game1.png" alt="Game" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Game</h3>
-          <p className="text-sm text-gray-700">Selesaikan semua tantangan seru</p>
-        </div>
-      </div>
-    </div>
-  </section>
-)
-
-// 4. COMPONENT: Why Section (Tetap Sama)
-const WhySection = () => (
-  <section className="w-full px-8 py-16 bg-white">
-    <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-12">
-        <h2 className="text-4xl md:text-5xl font-extrabold text-[#005C43] text-left max-w-sm leading-tight">
-          Mengapa Lentera Abhesa?
-        </h2>
-        <p className="text-gray-700 text-lg text-left max-w-xl leading-relaxed md:pt-2">
-          Terbuka untuk semua pelajar, masyarakat dan semua kalangan dimanapun berada untuk belajar dan melestarikan ragam halus abhesa Bawean
+        <h3 className="text-2xl font-extrabold text-gray-900 mb-2 leading-snug">
+          {article.judul}
+        </h3>
+        {/* Konten otomatis ter-truncate dengan aman lewat CSS line-clamp */}
+        <p className="text-gray-500 text-sm md:text-base leading-relaxed mb-4 line-clamp-2">
+          {article.konten}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
-        <div className="md:col-span-2 flex flex-col gap-4">
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-[240px] flex flex-col justify-start">
-            <h3 className="text-3xl font-extrabold mb-4">Melestarikan Bahasa</h3>
-            <p className="text-base text-gray-100 leading-relaxed">
-              Menangani bahasa halus melalui teknologi digital untuk menjangkau lebih banyak generasi muda
-            </p>
-          </div>
-          <div className="rounded-3xl overflow-hidden bg-gray-200 h-[320px] relative">
-            <Image src="/rusa.png" alt="Foto Fauna Bawean" fill className="object-cover" />
-          </div>
-        </div>
-
-        <div className="md:col-span-1 flex flex-col gap-4">
-          <div className="rounded-3xl overflow-hidden bg-gray-200 h-[340px] relative">
-            <Image src="/rumah.png" alt="Foto Rumah Bawean" fill className="object-cover" priority />
-          </div>
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-[220px] flex flex-col justify-start">
-            <h3 className="text-2xl font-extrabold mb-3">Edukasi Interaktif</h3>
-            <p className="text-sm text-gray-100 leading-relaxed">
-              Sediakan akses mudah dan menyenangkan untuk pembelajaran bahasa lokal
-            </p>
-          </div>
-        </div>
-
-        <div className="md:col-span-1 flex flex-col">
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-start h-full min-h-[300px]">
-            <h3 className="text-2xl font-extrabold mb-4">Budaya Pulau Bawean</h3>
-            <p className="text-base text-gray-100 leading-relaxed">
-              Menjaga tradisi lokal dengan dokumentasi budaya yang komprehensif
-            </p>
-          </div>
-        </div>
-      </div>
+      <Link
+        href={`/sejarah/${article.slug}`}
+        className="text-[#00664B] font-bold text-base flex items-center gap-1.5 hover:opacity-80 transition-opacity w-fit"
+      >
+        Selengkapnya <span className="text-lg leading-none">→</span>
+      </Link>
     </div>
-  </section>
+  </div>
 )
 
-// 5. COMPONENT: CTA Section (Tetap Sama)
-const CTASection = () => (
-  <section className="w-full px-8 py-16 bg-white">
-    <div className="max-w-7xl mx-auto">
-      <div className="bg-linear-to-b from-[#002b1f] to-[#005C43] rounded-3xl text-white p-12 text-center">
-        <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
-          Dukung Pelestarian Abhesa Halus Bawean
-        </h2>
-        <p className="text-base md:text-lg leading-relaxed mb-10 max-w-3xl mx-auto">
-          Bersama kita jaga, lestarikan dan contohkan bahasa dan sastra bawean untuk generasi akan datang. Punya usulan kata atau menemukan arti yang berbeda? yuk, beritahu kami!
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link
-            href="/dukungkami"
-            className="px-8 py-3 rounded-full bg-white text-[#005C43] font-bold hover:bg-gray-100 transition-colors"
-          >
-            Dukung Kami
-          </Link>
-          <button className="px-8 py-3 rounded-full border-2 border-white text-white font-bold hover:bg-white/10 transition-colors">
-            Ikuti Jejak Kami
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-)
-
-// 6. COMPONENT: Footer (Tetap Sama)
+// ==========================================
+// 5. COMPONENT: Footer (Identik dengan aslinya)
+// ==========================================
 const Footer = () => (
-  <footer className="w-full bg-[#EAF2ED] py-12 px-8">
+  <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-12">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div className="flex flex-col">
@@ -258,6 +163,7 @@ const Footer = () => (
             Platform digital untuk melestarikan bahasa dan sastra Bawean
           </p>
         </div>
+
         <div className="flex flex-col">
           <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
           <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
@@ -268,19 +174,17 @@ const Footer = () => (
           </ul>
         </div>
         <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
-          </ul>
+            <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
+            <ul className="space-y-2 text-sm text-gray-700">
+                <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+                <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+            </ul>
         </div>
         <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
-            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">Phone</a></li>
-          </ul>
+            <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
+            <ul className="space-y-2 text-sm text-gray-700">
+                <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+            </ul>
         </div>
       </div>
       <div className="border-t border-gray-300 pt-6 text-center">
@@ -290,63 +194,116 @@ const Footer = () => (
   </footer>
 )
 
-// MAIN EXPORT
-export default function Page() {
-  const [totalKamus, setTotalKamus] = useState<number | string>('...')
-  const [totalSejarah, setTotalSejarah] = useState<number | string>('...')
-  const [totalPengunjung, setTotalPengunjung] = useState<number | string>('...')
+// ==========================================
+// 6. MAIN DEFAULT EXPORT
+// ==========================================
+export default function SejarahPage() {
+  const [articles, setArticles] = useState<SejarahArticle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  
+  const articlesPerPage = 5 
 
+  // Fetch dari Supabase
   useEffect(() => {
-    // --- 1. Fetch stats dari Supabase ---
-    const fetchStats = async () => {
-      try {
-        const { count: countKamus } = await supabase.from('kamus').select('*', { count: 'exact', head: true })
-        if (countKamus !== null) setTotalKamus(countKamus)
+    const fetchArticles = async () => {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('sejarah')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-        const { count: countSejarah } = await supabase.from('sejarah').select('*', { count: 'exact', head: true })
-        if (countSejarah !== null) setTotalSejarah(countSejarah)
-      } catch (error) {
-        console.error('Gagal mengambil data statistik:', error)
-      }
+      if (data) setArticles(data as SejarahArticle[])
+      setLoading(false)
     }
-
-    // --- 2. Visitor Counter BARU Terhubung Langsung Supabase ---
-    const handleVisitorCount = async () => {
-      try {
-        // Cek apakah user udah visit di sesi ini (misal 1 hari) untuk cegah spam refresh
-        const visitedToday = localStorage.getItem('lentera_visited_today')
-        
-        if (!visitedToday) {
-           // Insert kunjungan baru dengan token sembarang sebagai session_id
-           const randomSessionId = Math.random().toString(36).substring(2, 15)
-           await supabase.from('pengunjung').insert([{ session_id: randomSessionId }])
-           
-           // Catat di browser lokal supaya gak nembak database terus tiap refresh
-           localStorage.setItem('lentera_visited_today', new Date().toISOString())
-        }
-
-        // Ambil total pengunjung bersih dari Supabase
-        const { count } = await supabase.from('pengunjung').select('*', { count: 'exact', head: true })
-        
-        if (count !== null) {
-          setTotalPengunjung(count.toLocaleString('id-ID'))
-        }
-      } catch (error) {
-        console.error('Gagal mengambil/mencatat data pengunjung:', error)
-      }
-    }
-
-    fetchStats()
-    handleVisitorCount()
+    fetchArticles()
   }, [])
 
+  // Mengubah pemfilteran agar membaca kolom 'judul' dan 'kategori'
+  const filteredArticles = useMemo(() => {
+    return articles.filter(article => 
+      (article.judul || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (article.kategori || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [articles, searchQuery])
+
+  const totalPages = Math.ceil(filteredArticles.length / articlesPerPage) || 1
+  const startIndex = (currentPage - 1) * articlesPerPage
+  const currentArticles = filteredArticles.slice(startIndex, startIndex + articlesPerPage)
+
   return (
-    <main className="w-full bg-white">
-      <Navbar />
-      <HeroSection totalKamus={totalKamus} totalSejarah={totalSejarah} totalPengunjung={totalPengunjung} />
-      <FeaturesSection />
-      <WhySection />
-      <CTASection />
+    <main className="w-full bg-white min-h-screen flex flex-col justify-between">
+      <div>
+        <Navbar />
+        <section className="px-8 py-12 bg-white">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <h1 className="text-5xl font-extrabold text-[#00664B] mb-3">Sejarah Pulau Bawean</h1>
+              <p className="text-gray-600 text-lg">Mengenal lebih sejarah, sastra dan nilai budaya Pulau Bawean</p>
+            </div>
+            <div className="relative w-full md:w-80">
+              <input
+                type="text"
+                placeholder="Cari artikel sejarah..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setCurrentPage(1) 
+                }}
+                className="w-full pl-4 pr-10 py-2.5 rounded-full border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#00664B]"
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute right-4 top-3.5" />
+            </div>
+          </div>
+        </section>
+
+        <section className="px-8 pb-16">
+          <div className="max-w-6xl mx-auto flex flex-col gap-6">
+            {loading ? (
+              <div className="flex justify-center py-20"><Loader2 className="animate-spin w-10 h-10 text-[#00664B]" /></div>
+            ) : currentArticles.length > 0 ? (
+              currentArticles.map((article) => (
+                <SejarahListItem key={article.id} article={article} />
+              ))
+            ) : (
+              <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <p className="text-gray-400 italic">Tidak ditemukan artikel sejarah.</p>
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex justify-end items-center gap-2 mt-8">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded-full font-bold text-sm transition-all flex items-center justify-center cursor-pointer ${
+                      currentPage === page ? 'bg-[#004D37] text-white shadow-sm' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
       <Footer />
     </main>
   )

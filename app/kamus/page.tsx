@@ -20,9 +20,9 @@ interface VocabularyItem {
   pelafalan_kasar: string
 }
 
-// Helper: Menentukan huruf awal kata
+// Helper: Menentukan huruf awal kata berdasarkan Bahasa Indonesia
 const getPrimaryWord = (item: VocabularyItem) => {
-  return item.kata_alos || item.kata_sedang || item.kata_kasar || ''
+  return item.arti_indonesia || ''
 }
 
 // 1. COMPONENT: Navbar
@@ -72,12 +72,12 @@ const Navbar = () => {
         </Link>
 
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? '✕' : '☰'}
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : '☰'}
         </button>
       </div>
 
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
+        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4 shadow-lg">
           {menuItems.map((item) => {
             const isActive = pathname === item.path
             return (
@@ -95,7 +95,7 @@ const Navbar = () => {
           })}
           <Link
             href="/dukungkami"
-            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center mt-2"
           >
             Dukung Kami
           </Link>
@@ -135,35 +135,69 @@ const Footer = () => (
   </footer>
 )
 
-// 3. COMPONENT: VocabularyCard
-const VocabularyCard = ({ item, onClick }: { item: VocabularyItem; onClick: () => void }) => (
-  <div onClick={onClick} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5">
-    <h3 className="font-bold text-gray-900 text-xl mb-1">{getPrimaryWord(item)}</h3>
-    <p className="text-sm text-gray-500">{item.arti_indonesia}</p>
-  </div>
-)
+// 3. COMPONENT: VocabularyCard (Sekarang nampilin Bahasa Indonesia sebagai judul utama)
+const VocabularyCard = ({ item, onClick }: { item: VocabularyItem; onClick: () => void }) => {
+  // Membuat preview teks Bawean untuk subtitle card
+  const baweanWordsPreview = [item.kata_kasar, item.kata_sedang, item.kata_alos]
+    .filter(Boolean)
+    .join(' / ');
 
-// 4. COMPONENT: Detail Pop-up Modal (Berdasarkan gambar image_0f60c9.png)
+  return (
+    <div onClick={onClick} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer hover:-translate-y-0.5 flex flex-col justify-center h-full gap-2">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded border border-gray-200">ID</span>
+        <h3 className="font-bold text-gray-900 text-lg leading-tight capitalize">{getPrimaryWord(item)}</h3>
+      </div>
+      <p className="text-sm text-gray-500 italic line-clamp-1 truncate">
+        Bawean: <span className="font-medium text-gray-600">{baweanWordsPreview || '-'}</span>
+      </p>
+    </div>
+  )
+}
+
+// 4. COMPONENT: Detail Pop-up Modal (Redesign sesuai permintaan Adel)
 const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () => void }) => {
   
-  // Fungsi simulasi suara pelafalan kata
-  const handleSpeak = (word: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(word);
+  // Fungsi simulasi suara pelafalan kata & kalimat
+  const handleSpeak = (text: string) => {
+    if ('speechSynthesis' in window && text) {
+      const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'id-ID'; 
       window.speechSynthesis.speak(utterance);
     }
   };
 
+  // Urutan dibalik: Kasar -> Sedang -> Halus
   const tiers = [
-    { type: 'Bahasa Halus', word: item.kata_alos, dotColor: 'bg-emerald-600', textColor: 'text-emerald-700' },
-    { type: 'Bahasa Sedang', word: item.kata_sedang, dotColor: 'bg-blue-500', textColor: 'text-blue-500' },
-    { type: 'Bahasa Kasar', word: item.kata_kasar, dotColor: 'bg-red-500', textColor: 'text-red-500' },
+    { 
+      type: 'Bahasa Kasar', 
+      word: item.kata_kasar, 
+      dotColor: 'bg-red-500', 
+      textColor: 'text-red-500',
+      contoh: item.contoh_kalimat,
+      artiContoh: item.arti_contoh
+    },
+    { 
+      type: 'Bahasa Sedang', 
+      word: item.kata_sedang, 
+      dotColor: 'bg-blue-500', 
+      textColor: 'text-blue-500',
+      contoh: item.contoh_kalimat,
+      artiContoh: item.arti_contoh
+    },
+    { 
+      type: 'Bahasa Halus', 
+      word: item.kata_alos, 
+      dotColor: 'bg-emerald-500', 
+      textColor: 'text-[#005C43]',
+      contoh: item.contoh_kalimat,
+      artiContoh: item.arti_contoh
+    },
   ];
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-[2rem] max-w-4xl w-full p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh]">
+      <div className="bg-white rounded-[2rem] max-w-4xl w-full p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
         
         {/* Tombol Close */}
         <button 
@@ -174,7 +208,7 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
         </button>
 
         {/* Konten Tingkatan Bahasa */}
-        <div className="space-y-4 mt-4">
+        <div className="space-y-4 mt-8 md:mt-2">
           {tiers.map((tier, index) => {
             // Jika data kata pada tier ini kosong, jangan tampilkan barisnya
             if (!tier.word) return null;
@@ -182,39 +216,59 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
             return (
               <div 
                 key={index} 
-                className="bg-[#F8FAFC] rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center border border-gray-50"
+                className="bg-[#F8FAFC] rounded-[24px] p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-center border border-gray-100"
               >
-                {/* Sisi Kiri: Detail Kata */}
-                <div className="flex flex-col gap-2">
+                {/* Sisi Kiri: Detail Kata Bawean & Indonesia */}
+                <div className="flex flex-col gap-3">
+                  {/* Kata & Audio */}
                   <div className="flex items-center gap-3">
-                    <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{tier.word}</h2>
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">{tier.word}</h2>
                     <button 
                       onClick={() => handleSpeak(tier.word)}
-                      className="text-[#00664B] hover:text-[#004D39] p-1.5 rounded-full hover:bg-emerald-50 transition-colors"
-                      title="Dengarkan Pelafalan"
+                      className="text-[#005C43] hover:text-[#004D39] p-2 rounded-full hover:bg-emerald-50 transition-all shrink-0"
+                      title="Dengarkan Pelafalan Kata"
                     >
                       <Volume2 className="w-6 h-6" />
                     </button>
                   </div>
                   
-                  {/* Label Kategori Tingkatan */}
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <span className={`w-2 h-2 rounded-full ${tier.dotColor}`}></span>
-                    <span className={tier.textColor}>{tier.type}</span>
-                  </div>
-
-                  {/* Arti Bahasa Indonesia */}
-                  <div className="flex items-center gap-2 text-gray-600 font-medium mt-1">
-                    <span className="inline-flex items-center justify-center rounded-full overflow-hidden shadow-sm">🇮🇩</span>
-                    <span>{item.arti_indonesia}</span>
+                  {/* Label Kategori & Terjemahan */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-sm font-bold">
+                      <span className={`w-2 h-2 rounded-full ${tier.dotColor}`}></span>
+                      <span className={tier.textColor}>{tier.type}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-500 font-medium text-sm mt-1">
+                      <span className="text-[10px] font-bold border border-gray-300 rounded px-1.5 py-0.5 text-gray-400 bg-white">ID</span>
+                      <span>{item.arti_indonesia}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Sisi Kanan: Contoh Penggunaan */}
-                <div className="border-t md:border-t-0 md:border-l border-gray-200/80 pt-4 md:pt-0 md:pl-8 flex flex-col justify-center min-h-[80px]">
-                  <span className="text-sm font-semibold text-gray-400 mb-1 block">Contoh Penggunaan</span>
-                  <p className="text-base font-bold text-gray-800">{item.contoh_kalimat || '-'}</p>
-                  <p className="text-sm text-gray-500 italic mt-0.5">({item.arti_contoh || '-'})</p>
+                {/* Sisi Kanan: Contoh Penggunaan & Audio Kalimat */}
+                <div className="border-t md:border-t-0 md:border-l border-gray-200/80 pt-5 md:pt-0 md:pl-8 flex flex-col justify-center min-h-[90px]">
+                  <span className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Contoh Penggunaan</span>
+                  
+                  {tier.contoh ? (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-start gap-3">
+                        <p className="text-base font-bold text-gray-800 leading-snug flex-1 pt-1">
+                          {tier.contoh}
+                        </p>
+                        {/* Audio Kalimat Penggunaan */}
+                        <button 
+                          onClick={() => handleSpeak(tier.contoh)}
+                          className="text-[#005C43] hover:text-[#004D39] p-1.5 rounded-full hover:bg-emerald-50 transition-all shrink-0"
+                          title="Dengarkan Pelafalan Kalimat"
+                        >
+                          <Volume2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500 italic mt-0.5">({tier.artiContoh || 'Tidak ada terjemahan'})</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">Belum ada contoh penggunaan.</p>
+                  )}
                 </div>
               </div>
             );
@@ -239,7 +293,8 @@ export default function KamusPage() {
   useEffect(() => {
     const fetchVocabulary = async () => {
       setLoading(true)
-      const { data } = await supabase.from('kamus').select('*').order('kata_alos')
+      // Sorting sekarang berdasarkan arti_indonesia karena itu yang jadi fokus utama
+      const { data } = await supabase.from('kamus').select('*').order('arti_indonesia', { ascending: true })
       if (data) setVocabulary(data)
       setLoading(false)
     }
@@ -273,40 +328,50 @@ export default function KamusPage() {
   const isDefaultView = searchQuery.trim() === '' && selectedLetter === ''
 
   return (
-    <main className="w-full bg-white min-h-screen relative">
+    <main className="w-full bg-[#F9FAFB] min-h-screen relative flex flex-col">
       <Navbar />
       
-      <section className="px-8 py-12 max-w-7xl mx-auto">
-        <h1 className="text-4xl font-extrabold text-[#00664B] mb-6">Kamus Bawean</h1>
+      <section className="px-6 md:px-8 py-12 max-w-7xl mx-auto w-full flex-1">
+        <h1 className="text-4xl font-extrabold text-[#005C43] mb-2">Kamus Bawean</h1>
+        <p className="text-gray-500 mb-8 font-medium">Cari kata dalam Bahasa Indonesia untuk melihat terjemahan dan tingkatan Bahasa Bawean.</p>
         
-        <input
-          type="text"
-          placeholder="Cari kata..."
-          className="w-full px-6 py-3 mb-6 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#00664B]/20 focus:border-[#00664B]"
-          onChange={(e) => {
-            setSearchQuery(e.target.value)
-            if(e.target.value) setSelectedLetter('')
-          }}
-        />
+        <div className="relative mb-6">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Cari kata Indonesia atau Bawean..."
+            className="w-full pl-14 pr-6 py-4 rounded-2xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#005C43]/20 focus:border-[#005C43] text-gray-800 transition-all"
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              if(e.target.value) setSelectedLetter('')
+            }}
+          />
+        </div>
 
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2 custom-scrollbar">
             {alphabet.map(letter => (
                 <button 
                     key={letter} 
                     onClick={() => { setSelectedLetter(prev => prev === letter ? '' : letter); setSearchQuery(''); }}
-                    className={`px-3 py-1 rounded-lg font-bold transition-all ${selectedLetter === letter ? 'bg-[#00664B] text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    className={`px-4 py-2 rounded-xl font-bold text-sm transition-all border ${selectedLetter === letter ? 'bg-[#005C43] text-white border-[#005C43] shadow-md shadow-[#005C43]/20' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-800'}`}
                 >{letter}</button>
             ))}
         </div>
 
         {loading ? (
-            <div className="text-center py-12"><Loader2 className="animate-spin w-10 h-10 mx-auto text-[#00664B]" /></div>
+            <div className="text-center py-20 flex flex-col items-center gap-4">
+              <Loader2 className="animate-spin w-10 h-10 text-[#005C43]" />
+              <p className="text-gray-500 font-medium">Memuat kamus...</p>
+            </div>
         ) : isDefaultView ? (
-            <div className="space-y-10">
+            <div className="space-y-12">
                 {groupedVocabulary.map(group => (
                     <div key={group.letter}>
-                        <h2 className="text-2xl font-bold mb-4 border-b pb-2 text-gray-800">{group.letter}</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="flex items-center gap-4 mb-6">
+                          <h2 className="text-3xl font-black text-gray-900">{group.letter}</h2>
+                          <div className="h-px bg-gray-200 flex-1 mt-2"></div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                             {group.items.map(item => (
                               <VocabularyCard 
                                 key={item.id} 
@@ -319,14 +384,23 @@ export default function KamusPage() {
                 ))}
             </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {filteredVocabulary.map(item => (
-                  <VocabularyCard 
-                    key={item.id} 
-                    item={item} 
-                    onClick={() => setSelectedItem(item)} 
-                  />
-                ))}
+            <div>
+              <p className="text-gray-500 mb-6 font-medium text-sm">Menampilkan hasil pencarian...</p>
+              {filteredVocabulary.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                  <p className="text-gray-500 font-medium">Kata tidak ditemukan. Coba kata kunci lain.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    {filteredVocabulary.map(item => (
+                      <VocabularyCard 
+                        key={item.id} 
+                        item={item} 
+                        onClick={() => setSelectedItem(item)} 
+                      />
+                    ))}
+                </div>
+              )}
             </div>
         )}
       </section>
