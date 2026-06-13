@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -22,53 +22,51 @@ export default function SusunKataPage() {
   const [isCorrect, setIsCorrect] = useState(false)
   const [gameFinished, setGameFinished] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [shake, setShake] = useState(false)
 
-  const fallbackDataset: ScrambleGameFormat[] = [
-    {
-      id: 1,
-      indonesianClue: 'Saya mau makan nasi goreng mas',
-      correctSentence: 'Eson terro ngakan nase goreng kak',
-      shuffledWords: ['ngakan', 'kak', 'Eson', 'nase', 'terro', 'goreng']
-    }
-  ]
+  // Audio ref untuk jawaban salah
+  const wrongAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
+    // Inisialisasi audio (pastikan path file sesuai dengan folder public lo)
+    wrongAudioRef.current = new Audio('/sounds/salah.mp3')
     fetchScrambleData()
   }, [])
 
   const fetchScrambleData = async () => {
     try {
       setLoading(true)
-      const { data: kamusData, error } = await supabase
-        .from('kamus')
+      // Mengambil dari tabel khusus yang dikelola admin
+      const { data: soalData, error } = await supabase
+        .from('soal_susun_kata')
         .select('*')
-        .not('contoh_kalimat', 'is', null)
-        .not('arti_contoh', 'is', null)
-        .limit(10)
 
-      if (error || !kamusData || kamusData.length === 0) {
-        loadRound(fallbackDataset, 0)
-        return
+      if (error || !soalData || soalData.length === 0) {
+        throw new Error('Tidak ada data soal')
       }
 
-      const formatted: ScrambleGameFormat[] = kamusData.map((item, idx) => {
-        const sentence = item.contoh_kalimat!.trim()
+      const formatted: ScrambleGameFormat[] = soalData.map((item, idx) => {
+        const sentence = item.kalimat_benar!.trim()
         const words = sentence.split(/\s+/).filter((w: string) => w.length > 0)
         const shuffled = [...words].sort(() => 0.5 - Math.random())
 
         return {
-          id: idx + 1,
-          indonesianClue: item.arti_contoh!,
+          id: item.id || idx + 1,
+          indonesianClue: item.clue_indonesia!,
           correctSentence: sentence,
           shuffledWords: shuffled
         }
       })
 
-      setDataset(formatted)
-      loadRound(formatted, 0)
+      // Acak urutan soal
+      const shuffledQuestions = formatted.sort(() => 0.5 - Math.random())
+      
+      setDataset(shuffledQuestions)
+      loadRound(shuffledQuestions, 0)
     } catch (err) {
-      console.error(err)
-      loadRound(fallbackDataset, 0)
+      console.error('Error fetching data:', err)
+      // Fallback
+      setDataset([])
     } finally {
       setLoading(false)
     }
@@ -76,12 +74,12 @@ export default function SusunKataPage() {
 
   const loadRound = (data: ScrambleGameFormat[], index: number) => {
     if (data.length > 0 && index < data.length) {
-      setDataset(data)
       setCurrentIndex(index)
       setAvailableWords([...data[index].shuffledWords])
       setSelectedWords([])
       setHasChecked(false)
       setIsCorrect(false)
+      setShake(false)
     }
   }
 
@@ -97,6 +95,13 @@ export default function SusunKataPage() {
     }
   }
 
+  const playWrongSound = () => {
+    if (wrongAudioRef.current) {
+      wrongAudioRef.current.currentTime = 0
+      wrongAudioRef.current.play().catch(e => console.log('Audio play failed:', e))
+    }
+  }
+
   const checkAnswer = () => {
     const userString = selectedWords.join(' ').toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
     const targetString = dataset[currentIndex].correctSentence.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
@@ -107,6 +112,10 @@ export default function SusunKataPage() {
 
     if (correct) {
       setScore(score + 20)
+    } else {
+      playWrongSound()
+      setShake(true)
+      setTimeout(() => setShake(false), 500) // Hentikan animasi shake
     }
   }
 
@@ -139,11 +148,11 @@ export default function SusunKataPage() {
     fetchScrambleData()
   }
 
-  if (loading) {
+  if (loading || dataset.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#005C43]"></div>
-        <p className="text-gray-500 mt-4 font-medium">Menyusun balok-balok kata...</p>
+        <p className="text-gray-500 mt-4 font-medium">{loading ? 'Menyusun balok kata...' : 'Soal belum tersedia di database.'}</p>
       </div>
     )
   }
@@ -151,42 +160,51 @@ export default function SusunKataPage() {
   const currentRound = dataset[currentIndex]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          50% { transform: translateX(8px); }
+          75% { transform: translateX(-8px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+      `}} />
+
       <div className="max-w-3xl mx-auto">
         {/* Navigation Head */}
-        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-          <Link href="/game" className="flex items-center text-gray-600 hover:text-[#005C43] font-semibold transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" /> Kembali
+        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-[20px] border-b-4 border-gray-200 shadow-sm">
+          <Link href="/game" className="flex items-center text-gray-500 hover:text-[#005C43] font-bold transition-colors">
+            <ArrowLeft className="w-5 h-5 mr-2" /> Keluar
           </Link>
-          <div className="bg-green-50 px-5 py-1.5 rounded-full text-[#005C43] font-black">
-            Skor Kuis: {score}
+          <div className="bg-[#005C43] px-6 py-2 rounded-xl text-white font-black shadow-inner shadow-black/20">
+            Skor: {score}
           </div>
         </div>
 
         {!gameFinished ? (
-          <div className="flex flex-col gap-6">
-            {/* Clue/Indonesian Mean Panel */}
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-8 shadow-xs">
-              <span className="text-xs font-bold text-[#005C43] bg-emerald-50 px-3 py-1 rounded-full tracking-wider uppercase">
-                Tantangan Susun Kalimat {currentIndex + 1} / {dataset.length}
+          <div className={`flex flex-col gap-6 transition-transform ${shake ? 'animate-shake' : ''}`}>
+            {/* Clue Panel */}
+            <div className="bg-white rounded-[24px] border-b-4 border-gray-200 p-6 md:p-8 shadow-sm">
+              <span className="text-xs font-black text-[#005C43] bg-emerald-50 px-4 py-1.5 rounded-lg tracking-wider uppercase border border-emerald-100">
+                Susun Kalimat {currentIndex + 1} / {dataset.length}
               </span>
-              <h3 className="text-sm font-semibold text-gray-400 mt-6 uppercase tracking-wider">Arti Kalimat (Petunjuk):</h3>
-              <p className="text-xl md:text-2xl font-extrabold text-gray-800 mt-1">
+              <p className="text-xl md:text-2xl font-black text-gray-800 mt-6 leading-snug">
                 "{currentRound?.indonesianClue}"
               </p>
             </div>
 
-            {/* Workplace: Where clicked words go */}
-            <div className="rounded-3xl border-2 border-dashed border-gray-200 p-6 min-h-30 flex flex-wrap gap-3 items-center justify-center bg-gray-50/50">
+            {/* Workplace Panel */}
+            <div className="rounded-[24px] border-4 border-dashed border-gray-200 p-8 min-h-[140px] flex flex-wrap gap-3 items-center justify-center bg-gray-50">
               {selectedWords.length === 0 ? (
-                <p className="text-gray-400 text-sm font-medium italic">Klik kata-kata di bawah untuk mulai menyusun susunan kalimat padu</p>
+                <p className="text-gray-400 text-sm font-bold">Susun blok kata di area ini</p>
               ) : (
                 selectedWords.map((word, idx) => (
                   <button
                     key={idx}
                     disabled={hasChecked}
                     onClick={() => handleWordClick(word, true)}
-                    className="bg-[#005C43] text-white font-bold px-4 py-2.5 rounded-xl shadow-xs hover:bg-red-600 hover:scale-95 transition-all text-base"
+                    className="bg-[#005C43] text-white font-black px-5 py-3 rounded-xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all text-base"
                   >
                     {word}
                   </button>
@@ -194,80 +212,81 @@ export default function SusunKataPage() {
               )}
             </div>
 
-            {/* Word Bank Area */}
-            <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-8 shadow-xs">
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 text-center">Pilihan Blok Kata:</h4>
+            {/* Word Bank Panel */}
+            <div className="bg-white rounded-[24px] border-b-4 border-gray-200 p-6 md:p-8 shadow-sm">
               <div className="flex flex-wrap gap-3 justify-center">
                 {availableWords.map((word, idx) => (
                   <button
                     key={idx}
                     disabled={hasChecked}
                     onClick={() => handleWordClick(word, false)}
-                    className="bg-white border-2 border-gray-200 text-gray-800 font-bold px-4 py-2.5 rounded-xl hover:border-[#005C43] hover:text-[#005C43] transition-all text-base shadow-2xs"
+                    className="bg-white border-2 border-gray-200 text-gray-700 font-bold px-5 py-3 rounded-xl shadow-[0_4px_0_#e5e7eb] hover:translate-y-1 hover:shadow-none hover:border-[#005C43] hover:text-[#005C43] transition-all text-base"
                   >
                     {word}
                   </button>
                 ))}
               </div>
 
-              {/* Action buttons inside block */}
-              <div className="mt-8 pt-6 border-t border-gray-100 flex gap-4">
+              {/* Action buttons */}
+              <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => loadRound(dataset, currentIndex)}
                   disabled={hasChecked || selectedWords.length === 0}
-                  className="px-6 py-3.5 border-2 border-gray-200 text-gray-600 font-bold rounded-full hover:bg-gray-50 transition-colors disabled:opacity-40"
+                  className="px-6 py-4 border-2 border-gray-200 text-gray-500 font-black rounded-2xl hover:bg-gray-50 transition-colors disabled:opacity-40"
                 >
-                  Ulangi
+                  <RefreshCw className="w-5 h-5 mx-auto" />
                 </button>
                 
                 {!hasChecked ? (
                   <button
                     onClick={checkAnswer}
                     disabled={selectedWords.length === 0}
-                    className="flex-1 bg-[#005C43] text-white font-extrabold py-3.5 rounded-full hover:opacity-90 transition-opacity shadow-xs disabled:opacity-50"
+                    className="flex-1 bg-[#005C43] text-white font-black text-lg py-4 rounded-2xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Periksa Jawaban
+                    Cek Jawaban
                   </button>
                 ) : (
                   <button
                     onClick={handleNextRound}
-                    className="flex-1 bg-[#005C43] text-white font-extrabold py-3.5 rounded-full hover:opacity-90 transition-opacity shadow-xs"
+                    className="flex-1 bg-[#005C43] text-white font-black text-lg py-4 rounded-2xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all"
                   >
-                    {currentIndex < dataset.length - 1 ? 'Lanjutkan Kalimat Selanjutnya →' : 'Selesaikan Permainan'}
+                    {currentIndex < dataset.length - 1 ? 'Lanjut ke Soal Berikutnya →' : 'Selesai'}
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Status Answer Feedback Banner */}
+            {/* Answer Feedback Banner */}
             {hasChecked && (
-              <div className={`p-6 rounded-3xl flex items-start gap-4 border animate-in slide-in-from-top-4 ${isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                {isCorrect ? <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0" /> : <AlertCircle className="w-6 h-6 text-red-600 shrink-0" />}
+              <div className={`p-6 rounded-[24px] border-b-4 flex items-start gap-4 animate-in slide-in-from-bottom-4 ${isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                {isCorrect ? <CheckCircle2 className="w-8 h-8 text-green-500 shrink-0" /> : <AlertCircle className="w-8 h-8 text-red-500 shrink-0" />}
                 <div>
-                  <h4 className="font-extrabold text-lg">{isCorrect ? 'Luar Biasa, Kalimat Sempurna!' : 'Yah, Masih Kurang Tepat'}</h4>
-                  <p className="text-sm mt-1 opacity-90 font-medium">
-                    <span className="font-bold">Kalimat yang Benar:</span> "{currentRound.correctSentence}"
-                  </p>
+                  <h4 className="font-black text-xl">{isCorrect ? 'Sempurna!' : 'Salah, jangan menyerah!'}</h4>
+                  {!isCorrect && (
+                    <p className="text-sm mt-2 opacity-90 font-medium bg-white/50 p-3 rounded-xl border border-red-100">
+                      <span className="font-bold">Jawaban Benar:</span> "{currentRound.correctSentence}"
+                    </p>
+                  )}
                 </div>
               </div>
             )}
           </div>
         ) : (
           /* Scoring End Phase Screen */
-          <div className="bg-white rounded-3xl border border-gray-100 p-8 md:p-12 shadow-sm text-center max-w-xl mx-auto animate-in scale-in">
-            <h1 className="text-4xl font-black text-[#005C43] mb-2">Sesi Selesai!</h1>
-            <p className="text-gray-500 text-sm mb-6">Kamu telah berhasil menyusun seluruh rangkaian tata bahasa halus Bawean dengan baik.</p>
+          <div className="bg-white rounded-[32px] border-b-8 border-gray-200 p-8 md:p-12 shadow-lg text-center max-w-xl mx-auto animate-in zoom-in">
+            <h1 className="text-4xl font-black text-[#005C43] mb-4">Sesi Selesai!</h1>
+            <p className="text-gray-500 font-medium mb-8">Kamu telah berhasil menyusun seluruh tata bahasa dengan baik.</p>
             
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-8">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Skor Akumulatif</p>
-              <p className="text-5xl font-black text-[#005C43] mt-2">{score} Pts</p>
+            <div className="bg-emerald-50 rounded-[24px] p-8 border-4 border-emerald-100 mb-8">
+              <p className="text-sm font-black text-[#005C43] uppercase tracking-wider">Total Poin Kamu</p>
+              <p className="text-6xl font-black text-[#005C43] mt-2 drop-shadow-sm">{score}</p>
             </div>
 
             <button
               onClick={resetGame}
-              className="w-full bg-[#005C43] hover:opacity-90 text-white font-bold py-4 rounded-full flex items-center justify-center gap-2 transition-opacity shadow-xs"
+              className="w-full bg-[#005C43] text-white font-black text-lg py-5 rounded-2xl shadow-[0_6px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-3"
             >
-              <RefreshCw className="w-5 h-5" /> Mainkan Sekali Lagi
+              <RefreshCw className="w-6 h-6" /> Mainkan Ulang Game
             </button>
           </div>
         )}

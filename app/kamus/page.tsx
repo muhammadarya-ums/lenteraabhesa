@@ -13,19 +13,31 @@ interface VocabularyItem {
   kata_sedang: string
   kata_kasar: string
   arti_indonesia: string
-  contoh_kalimat: string
-  arti_contoh: string
+  
+  contoh_kalimat_alos: string
+  arti_contoh_alos: string
+  pelafalan_kalimat_alos: string
+  
+  contoh_kalimat_sedang: string
+  arti_contoh_sedang: string
+  pelafalan_kalimat_sedang: string
+  
+  contoh_kalimat_kasar: string
+  arti_contoh_kasar: string
+  pelafalan_kalimat_kasar: string
+  
   pelafalan_alos: string
   pelafalan_sedang: string
   pelafalan_kasar: string
 }
 
-// Helper: Menentukan huruf awal kata berdasarkan Bahasa Indonesia
 const getPrimaryWord = (item: VocabularyItem) => {
   return item.arti_indonesia || ''
 }
 
+// ==========================================
 // 1. COMPONENT: Navbar
+// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -105,7 +117,9 @@ const Navbar = () => {
   )
 }
 
+// ==========================================
 // 2. COMPONENT: Footer
+// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8">
     <div className="max-w-7xl mx-auto">
@@ -129,15 +143,16 @@ const Footer = () => (
         </div>
       </div>
       <div className="border-t border-gray-300 pt-6 text-center">
-        <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
+        <p className="text-sm text-gray-700">© {new Date().getFullYear()} Lentera Abhesa. All rights reserved.</p>
       </div>
     </div>
   </footer>
 )
 
-// 3. COMPONENT: VocabularyCard (Sekarang nampilin Bahasa Indonesia sebagai judul utama)
+// ==========================================
+// 3. COMPONENT: VocabularyCard
+// ==========================================
 const VocabularyCard = ({ item, onClick }: { item: VocabularyItem; onClick: () => void }) => {
-  // Membuat preview teks Bawean untuk subtitle card
   const baweanWordsPreview = [item.kata_kasar, item.kata_sedang, item.kata_alos]
     .filter(Boolean)
     .join(' / ');
@@ -155,43 +170,53 @@ const VocabularyCard = ({ item, onClick }: { item: VocabularyItem; onClick: () =
   )
 }
 
-// 4. COMPONENT: Detail Pop-up Modal (Redesign sesuai permintaan Adel)
+// ==========================================
+// 4. COMPONENT: Detail Pop-up Modal
+// ==========================================
 const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () => void }) => {
   
-  // Fungsi simulasi suara pelafalan kata & kalimat
-  const handleSpeak = (text: string) => {
-    if ('speechSynthesis' in window && text) {
+  // Fungsi Pemutar Suara Dinamis (Memprioritaskan Audio DB, Fallback ke Text-to-Speech)
+  const handleSpeak = (text: string, audioUrl?: string) => {
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(e => console.error("Gagal memutar audio:", e));
+    } else if ('speechSynthesis' in window && text) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'id-ID'; 
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  // Urutan dibalik: Kasar -> Sedang -> Halus
   const tiers = [
     { 
-      type: 'Bahasa Kasar', 
-      word: item.kata_kasar, 
-      dotColor: 'bg-red-500', 
-      textColor: 'text-red-500',
-      contoh: item.contoh_kalimat,
-      artiContoh: item.arti_contoh
+      type: 'Bahasa Halus', 
+      word: item.kata_alos, 
+      audioWord: item.pelafalan_alos,
+      dotColor: 'bg-emerald-500', 
+      textColor: 'text-[#005C43]',
+      contoh: item.contoh_kalimat_alos,
+      artiContoh: item.arti_contoh_alos,
+      audioContoh: item.pelafalan_kalimat_alos
     },
     { 
       type: 'Bahasa Sedang', 
       word: item.kata_sedang, 
+      audioWord: item.pelafalan_sedang,
       dotColor: 'bg-blue-500', 
       textColor: 'text-blue-500',
-      contoh: item.contoh_kalimat,
-      artiContoh: item.arti_contoh
+      contoh: item.contoh_kalimat_sedang,
+      artiContoh: item.arti_contoh_sedang,
+      audioContoh: item.pelafalan_kalimat_sedang
     },
     { 
-      type: 'Bahasa Halus', 
-      word: item.kata_alos, 
-      dotColor: 'bg-emerald-500', 
-      textColor: 'text-[#005C43]',
-      contoh: item.contoh_kalimat,
-      artiContoh: item.arti_contoh
+      type: 'Bahasa Kasar', 
+      word: item.kata_kasar, 
+      audioWord: item.pelafalan_kasar,
+      dotColor: 'bg-red-500', 
+      textColor: 'text-red-500',
+      contoh: item.contoh_kalimat_kasar,
+      artiContoh: item.arti_contoh_kasar,
+      audioContoh: item.pelafalan_kalimat_kasar
     },
   ];
 
@@ -199,18 +224,15 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-[2rem] max-w-4xl w-full p-6 md:p-8 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
         
-        {/* Tombol Close */}
         <button 
           onClick={onClose} 
-          className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+          className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100 z-10"
         >
           <X className="w-6 h-6" />
         </button>
 
-        {/* Konten Tingkatan Bahasa */}
-        <div className="space-y-4 mt-8 md:mt-2">
+        <div className="space-y-4 mt-8 md:mt-2 relative">
           {tiers.map((tier, index) => {
-            // Jika data kata pada tier ini kosong, jangan tampilkan barisnya
             if (!tier.word) return null;
 
             return (
@@ -218,21 +240,19 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
                 key={index} 
                 className="bg-[#F8FAFC] rounded-[24px] p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-center border border-gray-100"
               >
-                {/* Sisi Kiri: Detail Kata Bawean & Indonesia */}
+                {/* Sisi Kiri: Kata */}
                 <div className="flex flex-col gap-3">
-                  {/* Kata & Audio */}
                   <div className="flex items-center gap-3">
                     <h2 className="text-3xl font-black text-gray-900 tracking-tight">{tier.word}</h2>
                     <button 
-                      onClick={() => handleSpeak(tier.word)}
-                      className="text-[#005C43] hover:text-[#004D39] p-2 rounded-full hover:bg-emerald-50 transition-all shrink-0"
-                      title="Dengarkan Pelafalan Kata"
+                      onClick={() => handleSpeak(tier.word, tier.audioWord)}
+                      className="text-[#005C43] hover:text-[#004D39] p-2 rounded-full hover:bg-emerald-50 transition-all shrink-0 shadow-sm border border-emerald-100 bg-white"
+                      title="Dengarkan Kata"
                     >
-                      <Volume2 className="w-6 h-6" />
+                      <Volume2 className="w-5 h-5" />
                     </button>
                   </div>
                   
-                  {/* Label Kategori & Terjemahan */}
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 text-sm font-bold">
                       <span className={`w-2 h-2 rounded-full ${tier.dotColor}`}></span>
@@ -245,7 +265,7 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
                   </div>
                 </div>
 
-                {/* Sisi Kanan: Contoh Penggunaan & Audio Kalimat */}
+                {/* Sisi Kanan: Kalimat */}
                 <div className="border-t md:border-t-0 md:border-l border-gray-200/80 pt-5 md:pt-0 md:pl-8 flex flex-col justify-center min-h-[90px]">
                   <span className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Contoh Penggunaan</span>
                   
@@ -255,13 +275,12 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
                         <p className="text-base font-bold text-gray-800 leading-snug flex-1 pt-1">
                           {tier.contoh}
                         </p>
-                        {/* Audio Kalimat Penggunaan */}
                         <button 
-                          onClick={() => handleSpeak(tier.contoh)}
-                          className="text-[#005C43] hover:text-[#004D39] p-1.5 rounded-full hover:bg-emerald-50 transition-all shrink-0"
-                          title="Dengarkan Pelafalan Kalimat"
+                          onClick={() => handleSpeak(tier.contoh, tier.audioContoh)}
+                          className="text-[#005C43] hover:text-[#004D39] p-1.5 rounded-full hover:bg-emerald-50 transition-all shrink-0 bg-white border border-emerald-100 shadow-sm"
+                          title="Dengarkan Kalimat"
                         >
-                          <Volume2 className="w-5 h-5" />
+                          <Volume2 className="w-4 h-4" />
                         </button>
                       </div>
                       <p className="text-sm text-gray-500 italic mt-0.5">({tier.artiContoh || 'Tidak ada terjemahan'})</p>
@@ -274,13 +293,14 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
             );
           })}
         </div>
-
       </div>
     </div>
   );
 };
 
-// Main Page Component
+// ==========================================
+// 5. MAIN PAGE
+// ==========================================
 export default function KamusPage() {
   const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -293,7 +313,6 @@ export default function KamusPage() {
   useEffect(() => {
     const fetchVocabulary = async () => {
       setLoading(true)
-      // Sorting sekarang berdasarkan arti_indonesia karena itu yang jadi fokus utama
       const { data } = await supabase.from('kamus').select('*').order('arti_indonesia', { ascending: true })
       if (data) setVocabulary(data)
       setLoading(false)
@@ -405,7 +424,6 @@ export default function KamusPage() {
         )}
       </section>
 
-      {/* Pop-up Modal Detail Kosa Kata */}
       {selectedItem && (
         <VocabularyModal 
           item={selectedItem} 

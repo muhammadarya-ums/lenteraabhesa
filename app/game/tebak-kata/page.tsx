@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Heart, Lightbulb, Check, X, ArrowLeft, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -24,81 +24,70 @@ export default function TebakKataPage() {
   const [showHint, setShowHint] = useState(false)
   const [gameFinished, setGameFinished] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [shake, setShake] = useState(false)
 
-  // Fallback data jika database kosong saat testing awal
-  const fallbackData: QuestionFormat[] = [
-    {
-      id: 1,
-      wordAlos: 'Eson',
-      correctAnswer: 'Saya',
-      options: ['Saya', 'Kamu', 'Dia', 'Mereka'],
-      sentenceClue: 'Eson terro ka Bawean.',
-      indonesianMeaning: 'Saya ingin ke Bawean.'
-    },
-    {
-      id: 2,
-      wordAlos: 'Kaula',
-      correctAnswer: 'Saya (Halus)',
-      options: ['Kamu', 'Dia', 'Saya (Halus)', 'Kita'],
-      sentenceClue: 'Kaula badhi rabhu dhemma.',
-      indonesianMeaning: 'Saya akan datang besok.'
-    }
-  ]
+  // Audio ref
+  const wrongAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
+    // Inisialisasi audio dari folder public
+    wrongAudioRef.current = new Audio('/sounds/salah.mp3')
     fetchGameData()
   }, [])
 
   const fetchGameData = async () => {
     try {
       setLoading(true)
-      // Ambil 10 data acak dari tabel kamus yang memiliki data valid
-      const { data: kamusData, error } = await supabase
-        .from('kamus')
+      // Ambil data dari tabel khusus admin: soal_tebak_kata
+      const { data: soalData, error } = await supabase
+        .from('soal_tebak_kata')
         .select('*')
-        .not('kata_alos', 'is', null)
-        .not('arti_indonesia', 'is', null)
-        .limit(15)
 
-      if (error || !kamusData || kamusData.length < 4) {
-        setQuestions(fallbackData)
-        setLoading(false)
-        return
+      if (error || !soalData || soalData.length === 0) {
+        throw new Error('Tidak ada data soal dari admin')
       }
 
-      // Generate susunan soal pilihan ganda dinamis
-      const formatted: QuestionFormat[] = kamusData.map((item, idx) => {
-        const correct = item.arti_indonesia
-        // Ambil pengecoh dari baris data lain
-        const distractors = kamusData
-          .filter((k) => k.id !== item.id)
-          .map((k) => k.arti_indonesia)
-          .sort(() => 0.5 - Math.random())
-          .slice(0, 3)
+      const formatted: QuestionFormat[] = soalData.map((item, idx) => {
+        // Ambil opsi dari kolom-kolom tabel database (Pastikan admin mengisi pengecoh)
+        const allOptions = [
+          item.jawaban_benar,
+          item.pengecoh_1,
+          item.pengecoh_2,
+          item.pengecoh_3
+        ].filter(Boolean) // Filter jika ada yang kosong
 
-        const options = [correct, ...distractors].sort(() => 0.5 - Math.random())
+        const shuffledOptions = allOptions.sort(() => 0.5 - Math.random())
 
         return {
-          id: idx + 1,
-          wordAlos: item.kata_alos,
-          correctAnswer: correct,
-          options: options,
-          sentenceClue: item.contoh_kalimat || 'Tidak ada contoh kalimat.',
-          indonesianMeaning: item.arti_contoh || 'Tidak ada arti contoh.'
+          id: item.id || idx + 1,
+          wordAlos: item.kata_soal,
+          correctAnswer: item.jawaban_benar,
+          options: shuffledOptions,
+          sentenceClue: item.clue_kalimat || 'Tidak ada petunjuk.',
+          indonesianMeaning: item.arti_clue || 'Tidak ada petunjuk terjemahan.'
         }
       })
 
-      setQuestions(formatted)
+      // Acak urutan pertanyaan
+      const shuffledQuestions = formatted.sort(() => 0.5 - Math.random())
+      setQuestions(shuffledQuestions)
     } catch (err) {
       console.error(err)
-      setQuestions(fallbackData)
+      setQuestions([])
     } finally {
       setLoading(false)
     }
   }
 
+  const playWrongSound = () => {
+    if (wrongAudioRef.current) {
+      wrongAudioRef.current.currentTime = 0
+      wrongAudioRef.current.play().catch(e => console.log('Audio play failed:', e))
+    }
+  }
+
   const handleAnswer = (answer: string) => {
-    if (selectedAnswer) return // Mencegah klik ganda
+    if (selectedAnswer) return 
 
     setSelectedAnswer(answer)
     const check = answer === questions[currentIndex].correctAnswer
@@ -107,9 +96,14 @@ export default function TebakKataPage() {
     if (check) {
       setScore(score + 10)
     } else {
+      playWrongSound()
+      setShake(true)
+      setTimeout(() => setShake(false), 500)
+      
       setLives(lives - 1)
       if (lives - 1 <= 0) {
-        handleEndGame(score)
+        // Timer delay sedikit agar user bisa melihat feedback merah sebelum End Game
+        setTimeout(() => handleEndGame(score), 1500)
         return
       }
     }
@@ -129,12 +123,11 @@ export default function TebakKataPage() {
 
   const handleEndGame = async (finalScore: number) => {
     setGameFinished(true)
-    // TRACKING ANALITIK: Catat aktivitas ke database secara otomatis
     try {
       await supabase.from('game_analytics').insert([
         {
           game_name: 'tebak_kata',
-          session_id: navigator.userAgent, // Identifikasi unik device player
+          session_id: navigator.userAgent,
           score: finalScore
         }
       ])
@@ -154,11 +147,11 @@ export default function TebakKataPage() {
     fetchGameData()
   }
 
-  if (loading) {
+  if (loading || questions.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#005C43]"></div>
-        <p className="text-gray-500 mt-4 font-medium">Menyiapkan tantangan kata...</p>
+        <p className="text-gray-500 mt-4 font-medium">{loading ? 'Memuat kuis...' : 'Soal Tebak Kata belum tersedia.'}</p>
       </div>
     )
   }
@@ -166,52 +159,62 @@ export default function TebakKataPage() {
   const currentQuestion = questions[currentIndex]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-6px); }
+          50% { transform: translateX(6px); }
+          75% { transform: translateX(-6px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+      `}} />
+
       <div className="max-w-4xl mx-auto">
         {/* Top Navigation & Stats Container */}
-        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-          <Link href="/game" className="flex items-center text-gray-600 hover:text-[#005C43] font-semibold transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" /> Kembali
+        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-[20px] border-b-4 border-gray-200 shadow-sm">
+          <Link href="/game" className="flex items-center text-gray-500 hover:text-[#005C43] font-bold transition-colors">
+            <ArrowLeft className="w-5 h-5 mr-2" /> Keluar
           </Link>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center bg-red-50 px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-4 md:gap-6">
+            <div className="flex items-center gap-1 bg-red-50 px-3 py-2 rounded-xl border border-red-100">
               {[...Array(3)].map((_, i) => (
-                <Heart key={i} className={`w-5 h-5 ${i < lives ? 'text-red-500 fill-red-500' : 'text-gray-300'}`} />
+                <Heart key={i} className={`w-5 h-5 ${i < lives ? 'text-red-500 fill-red-500' : 'text-red-200 fill-red-100'}`} />
               ))}
             </div>
-            <div className="bg-green-50 px-4 py-1.5 rounded-full text-[#005C43] font-bold">
+            <div className="bg-[#005C43] px-5 py-2 rounded-xl text-white font-black shadow-inner shadow-black/20">
               Skor: {score}
             </div>
           </div>
         </div>
 
         {!gameFinished ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Panel: The Question block */}
-            <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-6 md:p-8 shadow-xs flex flex-col justify-between min-h-[420px]">
+          <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 transition-transform ${shake ? 'animate-shake' : ''}`}>
+            {/* Left Panel: Question */}
+            <div className="lg:col-span-2 bg-white rounded-[24px] border-b-4 border-gray-200 p-6 md:p-8 shadow-sm flex flex-col justify-between min-h-[420px]">
               <div>
-                <span className="text-xs font-bold text-[#005C43] bg-emerald-50 px-3 py-1 rounded-full tracking-wider uppercase">
-                  Soal {currentIndex + 1} dari {questions.length}
+                <span className="text-xs font-black text-[#005C43] bg-emerald-50 px-4 py-1.5 rounded-lg border border-emerald-100 uppercase tracking-wider">
+                  Soal {currentIndex + 1} / {questions.length}
                 </span>
-                <h2 className="text-xl md:text-2xl font-medium text-gray-500 mt-6">Apa arti dari kata halus berikut?</h2>
-                <h1 className="text-4xl md:text-5xl font-extrabold text-[#005C43] mt-2 tracking-tight">
+                <h2 className="text-lg md:text-xl font-bold text-gray-400 mt-8">Pilih arti dari kata Bawean berikut:</h2>
+                <h1 className="text-5xl md:text-6xl font-black text-gray-900 mt-2 tracking-tight">
                   "{currentQuestion?.wordAlos}"
                 </h1>
               </div>
 
               {/* Grid Options */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10">
                 {currentQuestion?.options.map((option, index) => {
                   const chr = String.fromCharCode(65 + index)
-                  let btnStyle = 'border-gray-200 hover:border-[#005C43] hover:bg-emerald-50/30'
+                  let btnStyle = 'border-gray-200 bg-white text-gray-700 shadow-[0_4px_0_#e5e7eb] hover:translate-y-1 hover:shadow-none hover:border-[#005C43]'
                   
                   if (selectedAnswer) {
                     if (option === currentQuestion.correctAnswer) {
-                      btnStyle = 'border-green-500 bg-green-50 text-green-700 shadow-xs'
+                      btnStyle = 'border-green-500 bg-green-50 text-green-700 shadow-none translate-y-1'
                     } else if (selectedAnswer === option && !isCorrect) {
-                      btnStyle = 'border-red-500 bg-red-50 text-red-700 shadow-xs'
+                      btnStyle = 'border-red-500 bg-red-50 text-red-700 shadow-none translate-y-1'
                     } else {
-                      btnStyle = 'opacity-50 border-gray-200 bg-gray-50'
+                      btnStyle = 'opacity-40 border-gray-200 bg-gray-50 shadow-none'
                     }
                   }
 
@@ -220,56 +223,51 @@ export default function TebakKataPage() {
                       key={index}
                       disabled={!!selectedAnswer}
                       onClick={() => handleAnswer(option)}
-                      className={`w-full p-4 text-left border-2 rounded-2xl font-bold text-base transition-all flex items-center justify-between ${btnStyle}`}
+                      className={`w-full p-4 text-left border-2 rounded-2xl font-black text-base md:text-lg transition-all flex items-center justify-between ${btnStyle}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700">
+                      <div className="flex items-center gap-4">
+                        <span className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black ${selectedAnswer ? 'bg-transparent' : 'bg-gray-100'}`}>
                           {chr}
                         </span>
                         <span>{option}</span>
                       </div>
-                      {selectedAnswer && option === currentQuestion.correctAnswer && <Check className="w-5 h-5 text-green-600" />}
-                      {selectedAnswer === option && !isCorrect && <X className="w-5 h-5 text-red-600" />}
+                      {selectedAnswer && option === currentQuestion.correctAnswer && <Check className="w-6 h-6 text-green-600" />}
+                      {selectedAnswer === option && !isCorrect && <X className="w-6 h-6 text-red-600" />}
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            {/* Right Panel: Hints and Actions */}
+            {/* Right Panel: Hints and Next Action */}
             <div className="flex flex-col gap-6">
-              <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs flex-1">
+              <div className="bg-white rounded-[24px] border-b-4 border-gray-200 p-6 shadow-sm flex flex-col">
                 <button
                   onClick={() => setShowHint(!showHint)}
-                  className="w-full flex items-center justify-between p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-amber-800 font-bold hover:bg-amber-100/70 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 p-4 bg-amber-50 rounded-2xl border-2 border-amber-200 text-amber-600 font-black shadow-[0_4px_0_#fde68a] hover:translate-y-1 hover:shadow-none transition-all"
                 >
-                  <div className="flex items-center gap-2">
-                    <Lightbulb className="w-5 h-5 fill-amber-500 text-amber-600" />
-                    <span>Butuh Petunjuk Kalimat?</span>
-                  </div>
+                  <Lightbulb className="w-5 h-5 fill-amber-500 text-amber-500" />
+                  Lihat Clue Kalimat
                 </button>
 
                 {showHint && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 animate-in fade-in duration-300">
-                    <p className="text-sm font-semibold text-gray-500">Contoh Penggunaan:</p>
-                    <p className="text-base font-bold text-gray-800 mt-1 italic">"{currentQuestion?.sentenceClue}"</p>
+                  <div className="mt-6 p-5 bg-gray-50 rounded-2xl border border-gray-200 animate-in fade-in">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Petunjuk Konteks:</p>
+                    <p className="text-base font-black text-gray-800 leading-snug">"{currentQuestion?.sentenceClue}"</p>
                   </div>
                 )}
 
-                {selectedAnswer && (
-                  <div className="mt-6 border-t border-gray-100 pt-6 animate-in slide-in-from-bottom-4">
-                    <div className={`p-4 rounded-2xl text-center font-extrabold text-xl tracking-wide mb-6 ${isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {isCorrect ? '🎉 JAWABAN BENAR!' : '❌ JAWABAN SALAH'}
-                    </div>
-                    <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 text-sm text-gray-700 mb-6 leading-relaxed">
-                      <span className="font-bold text-[#005C43]">Arti Konteks Kalimat: </span>
+                {selectedAnswer && lives > 0 && (
+                  <div className="mt-auto pt-6 border-t border-gray-100 animate-in slide-in-from-bottom-4">
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-sm text-gray-600 mb-6 font-medium">
+                      <span className="font-bold text-[#005C43] block mb-1">Arti Clue:</span>
                       {currentQuestion?.indonesianMeaning}
                     </div>
                     <button
                       onClick={handleNext}
-                      className="w-full bg-[#005C43] hover:opacity-90 text-white font-extrabold py-4 rounded-full transition-opacity shadow-sm"
+                      className="w-full bg-[#005C43] text-white font-black text-lg py-4 rounded-2xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all"
                     >
-                      {currentIndex < questions.length - 1 ? 'Lanjutkan Pertanyaan →' : 'Selesaikan Permainan'}
+                      {currentIndex < questions.length - 1 ? 'Soal Berikutnya →' : 'Lihat Hasil Akhir'}
                     </button>
                   </div>
                 )}
@@ -277,27 +275,35 @@ export default function TebakKataPage() {
             </div>
           </div>
         ) : (
-          /* Scoring/Game End Component screen */
-          <div className="bg-white rounded-3xl border border-gray-100 p-8 md:p-12 shadow-sm text-center max-w-xl mx-auto animate-in scale-in">
-            <h1 className="text-4xl font-black text-[#005C43] mb-2">Permainan Selesai!</h1>
-            <p className="text-gray-500 text-base mb-8">Kerja bagus, kamu telah berusaha melestarikan bahasa Abhesa Halus Bawean.</p>
+          /* Game Over / Final Score Screen */
+          <div className="bg-white rounded-[32px] border-b-8 border-gray-200 p-8 md:p-12 shadow-lg text-center max-w-xl mx-auto animate-in zoom-in">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              {lives > 0 ? <Check className="w-10 h-10" /> : <X className="w-10 h-10 text-red-500" />}
+            </div>
             
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-8 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Skor Akhir</p>
+            <h1 className="text-4xl font-black text-gray-900 mb-2">
+              {lives > 0 ? 'Luar Biasa!' : 'Game Over'}
+            </h1>
+            <p className="text-gray-500 font-medium mb-8">
+              {lives > 0 ? 'Kamu menguasai banyak kosakata baru hari ini.' : 'Nyawa habis, tapi jangan menyerah!'}
+            </p>
+            
+            <div className="bg-gray-50 rounded-[24px] p-6 border-2 border-gray-100 mb-8 grid grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-50">
+                <p className="text-xs text-gray-400 font-bold uppercase">Skor Akhir</p>
                 <p className="text-4xl font-black text-[#005C43] mt-1">{score}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Status Nyawa</p>
-                <p className="text-4xl font-black text-red-500 mt-1">{lives > 0 ? `${lives} ❤️` : '0 💀'}</p>
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-50">
+                <p className="text-xs text-gray-400 font-bold uppercase">Sisa Nyawa</p>
+                <p className="text-4xl font-black text-red-500 mt-1">{lives > 0 ? `${lives} ❤️` : 'Habis'}</p>
               </div>
             </div>
 
             <button
               onClick={handleReset}
-              className="w-full bg-[#005C43] hover:opacity-90 text-white font-bold py-4 rounded-full flex items-center justify-center gap-2 transition-opacity"
+              className="w-full bg-[#005C43] text-white font-black text-lg py-5 rounded-2xl shadow-[0_6px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-3"
             >
-              <RefreshCw className="w-5 h-5" /> Main Lagi Yuk
+              <RefreshCw className="w-6 h-6" /> Main Lagi Yuk
             </button>
           </div>
         )}
