@@ -377,7 +377,6 @@ export default function AdminDashboardPage() {
   const handleSubmitTk = async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitLoading(true);
     try {
-      // Set nilai default ke null jika string kosong agar lebih konsisten di database
       const payload = {
         ...tkForm,
         clue_kalimat: tkForm.clue_kalimat || null,

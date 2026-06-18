@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, BookOpen, Blocks } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Heart, Check, Loader2, X, Trophy, RotateCcw } from 'lucide-react'
+import Image from "next/image"
 import { supabase } from '@/lib/supabase'
 
 interface WordObject {
@@ -17,17 +19,138 @@ interface ScrambleGameFormat {
   shuffledWords: WordObject[]
 }
 
+const Navbar = () => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
+
+  const menuItems = [
+    { name: 'Beranda', path: '/' },
+    { name: 'Kamus', path: '/kamus' },
+    { name: 'Sejarah', path: '/sejarah' },
+    { name: 'Game🚀', path: '/game' },
+    { name: 'Tentang Kami', path: '/tentang-kami' },
+  ]
+
+  return (
+    <nav className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <Link href="/">
+            <Image src="/logo.png" alt="Lentera Abhesa" width={100} height={50} priority className="cursor-pointer" />
+          </Link>
+        </div>
+
+        <div className="hidden md:flex gap-6">
+          {menuItems.map((item) => {
+            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
+            return (
+              <Link 
+                key={item.name} 
+                href={item.path} 
+                className={`text-sm font-semibold transition-colors ${
+                  isActive ? 'text-[#005C43]' : 'text-gray-700 hover:text-[#005C43]'
+                }`}
+              >
+                {item.name}
+              </Link>
+            )
+          })}
+        </div>
+
+        <button className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity">
+          Dukung Kami
+        </button>
+
+        <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : '☰'}
+        </button>
+      </div>
+
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
+          {menuItems.map((item) => {
+            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
+            return (
+              <Link 
+                key={item.name} 
+                href={item.path} 
+                onClick={() => setIsMobileMenuOpen(false)} 
+                className={`text-left font-semibold transition-colors ${
+                  isActive ? 'text-[#005C43]' : 'text-gray-700'
+                }`}
+              >
+                {item.name}
+              </Link>
+            )
+          })}
+          <Link href="/dukungkami" className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center">
+            Dukung Kami
+          </Link>
+        </div>
+      )}
+    </nav>
+  )
+}
+
+const Footer = () => (
+  <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-16">
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 mb-4">
+            <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
+          </div>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Platform digital untuk melestarikan bahasa dan sastra Bawean
+          </p>
+        </div>
+        <div className="flex flex-col">
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
+          <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
+            <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
+            <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
+            <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
+            <li><Link href="/game" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
+          </ul>
+        </div>
+        <div className="flex flex-col">
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+            <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+            <li><a href="#" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
+          </ul>
+        </div>
+        <div className="flex flex-col">
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">Phone</a></li>
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-gray-300 pt-6 text-center">
+        <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+)
+
 export default function SusunKataPage() {
   const [dataset, setDataset] = useState<ScrambleGameFormat[]>([])
+  const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
+  
   const [selectedWords, setSelectedWords] = useState<WordObject[]>([])
   const [availableWords, setAvailableWords] = useState<WordObject[]>([])
-  const [score, setScore] = useState(0)
-  const [hasChecked, setHasChecked] = useState(false)
+  
+  const [isAnswered, setIsAnswered] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
-  const [gameFinished, setGameFinished] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [shake, setShake] = useState(false)
+  
+  const [lives, setLives] = useState(3)
+  const [score, setScore] = useState(0)
+  const [isGameOver, setIsGameOver] = useState(false)
+  const [isGameFinished, setIsGameFinished] = useState(false)
 
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -39,9 +162,7 @@ export default function SusunKataPage() {
   const fetchScrambleData = async () => {
     try {
       setLoading(true)
-      const { data: soalData, error } = await supabase
-        .from('soal_susun_kata')
-        .select('*')
+      const { data: soalData, error } = await supabase.from('soal_susun_kata').select('*')
 
       if (error || !soalData || soalData.length === 0) {
         throw new Error('Tidak ada data soal')
@@ -52,9 +173,9 @@ export default function SusunKataPage() {
         const words = sentence.split(/\s+/).filter((w: string) => w.length > 0)
         
         const wordObjects: WordObject[] = words.map((w: string, wIdx: number) => ({
-  id: `${item.id || idx}-${wIdx}`,
-  text: w
-}))
+          id: `${item.id || idx}-${wIdx}`,
+          text: w
+        }))
 
         const shuffled = [...wordObjects].sort(() => 0.5 - Math.random())
 
@@ -67,7 +188,6 @@ export default function SusunKataPage() {
       })
 
       const shuffledQuestions = formatted.sort(() => 0.5 - Math.random())
-      
       setDataset(shuffledQuestions)
       loadRound(shuffledQuestions, 0)
     } catch (err) {
@@ -83,21 +203,8 @@ export default function SusunKataPage() {
       setCurrentIndex(index)
       setAvailableWords([...data[index].shuffledWords])
       setSelectedWords([])
-      setHasChecked(false)
+      setIsAnswered(false)
       setIsCorrect(false)
-      setShake(false)
-    }
-  }
-
-  const handleWordClick = (wordObj: WordObject, fromSelected: boolean) => {
-    if (hasChecked) return
-
-    if (fromSelected) {
-      setSelectedWords(selectedWords.filter((w) => w.id !== wordObj.id))
-      setAvailableWords([...availableWords, wordObj])
-    } else {
-      setAvailableWords(availableWords.filter((w) => w.id !== wordObj.id))
-      setSelectedWords([...selectedWords, wordObj])
     }
   }
 
@@ -108,199 +215,306 @@ export default function SusunKataPage() {
     }
   }
 
-  const checkAnswer = () => {
-    const userString = selectedWords.map(w => w.text).join(' ').toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-    const targetString = dataset[currentIndex].correctSentence.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-
-    const correct = userString === targetString
-    setIsCorrect(correct)
-    setHasChecked(true)
-
-    if (correct) {
-      setScore(score + 20)
-    } else {
-      playWrongSound()
-      setShake(true)
-      setTimeout(() => setShake(false), 500)
-    }
-  }
-
-  const handleNextRound = () => {
-    if (currentIndex < dataset.length - 1) {
-      loadRound(dataset, currentIndex + 1)
-    } else {
-      handleFinishGame()
-    }
-  }
-
-  const handleFinishGame = async () => {
-    setGameFinished(true)
+  const handleEndGame = async (finalScore: number) => {
     try {
       await supabase.from('game_analytics').insert([
         {
           game_name: 'susun_kata',
           session_id: navigator.userAgent,
-          score: score
+          score: finalScore
         }
       ])
     } catch (err) {
-      console.error(err)
+      console.error("Gagal mencatat analitik game:", err)
     }
   }
 
-  const resetGame = () => {
+  const restartGame = () => {
+    setLives(3)
     setScore(0)
-    setGameFinished(false)
+    setCurrentIndex(0)
+    setIsGameOver(false)
+    setIsGameFinished(false)
     fetchScrambleData()
   }
 
-  if (loading || dataset.length === 0) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#005C43]"></div>
-        <p className="text-gray-500 mt-4 font-medium">{loading ? 'Menyusun balok kata...' : 'Soal belum tersedia di database.'}</p>
+      <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-[#005C43] animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Menyiapkan Balok Kata...</p>
+      </div>
+    )
+  }
+
+  if (dataset.length === 0) {
+    return (
+      <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="bg-gray-50 border border-gray-200 p-8 rounded-2xl text-center max-w-md">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Belum Ada Soal</h2>
+          <p className="text-gray-500 font-medium mb-6">Soal Susun Kata belum tersedia dari Admin.</p>
+          <Link href="/game" className="px-8 py-3 bg-[#005C43] text-white rounded-full font-bold hover:opacity-90 inline-block transition-opacity">
+            Kembali ke Menu Game
+          </Link>
+        </div>
       </div>
     )
   }
 
   const currentRound = dataset[currentIndex]
 
+  const handleWordClick = (wordObj: WordObject, fromSelected: boolean) => {
+    if (isAnswered) return
+
+    if (fromSelected) {
+      setSelectedWords(selectedWords.filter((w) => w.id !== wordObj.id))
+      setAvailableWords([...availableWords, wordObj])
+    } else {
+      setAvailableWords(availableWords.filter((w) => w.id !== wordObj.id))
+      setSelectedWords([...selectedWords, wordObj])
+    }
+  }
+
+  const handleCheckAnswer = () => {
+    if (selectedWords.length === 0) return
+    setIsAnswered(true)
+
+    const userString = selectedWords.map(w => w.text).join(' ').toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+    const targetString = dataset[currentIndex].correctSentence.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+
+    const correct = userString === targetString
+    setIsCorrect(correct)
+
+    if (correct) {
+      setScore(prev => prev + 100)
+    } else {
+      playWrongSound()
+      const newLives = lives - 1
+      setLives(newLives)
+      if (newLives <= 0) {
+        setTimeout(() => {
+          setIsGameOver(true)
+          handleEndGame(score)
+        }, 1000)
+      }
+    }
+  }
+
+  const handleNextQuestion = () => {
+    if (lives <= 0) {
+      setIsGameOver(true)
+      return
+    }
+
+    if (currentIndex < dataset.length - 1) {
+      loadRound(dataset, currentIndex + 1)
+    } else {
+      setIsGameFinished(true)
+      handleEndGame(score)
+    }
+  }
+
+  let nextButtonText = 'Lanjutkan →'
+  if (lives <= 0) nextButtonText = 'Akhiri Permainan'
+  else if (currentIndex >= dataset.length - 1) nextButtonText = 'Selesai'
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-linear-to-tr from-[#F0F7F4] via-[#F8F9FA] to-[#E6F0EB] py-8 px-4 sm:px-6 lg:px-8 font-sans">
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25 { transform: translateX(-8px); }
-          50% { transform: translateX(8px); }
-          75% { transform: translateX(-8px); }
-        }
-        .animate-shake { animation: shake 0.4s ease-in-out; }
-      `}} />
+    <main className="w-full min-h-screen bg-white flex flex-col justify-between">
+      <div>
+        <Navbar />
 
-      <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-200/20 rounded-full blur-3xl"></div>
-      <div className="absolute top-1/2 left-0 w-40 h-40 bg-teal-200/20 rounded-full blur-2xl animate-pulse"></div>
-
-      <div className="max-w-3xl mx-auto relative z-10">
-        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-[20px] border-b-4 border-gray-200 shadow-sm">
-          <Link href="/game" className="flex items-center text-gray-500 hover:text-[#005C43] font-bold transition-colors">
-            <ArrowLeft className="w-5 h-5 mr-2" /> Keluar
-          </Link>
-          <div className="bg-[#005C43] px-6 py-2 rounded-xl text-white font-black shadow-inner shadow-black/20">
-            Skor: {score}
-          </div>
-        </div>
-
-        {!gameFinished ? (
-          <div className={`flex flex-col gap-6 transition-transform ${shake ? 'animate-shake' : ''}`}>
+        {isGameOver && (
+          <div className="max-w-3xl mx-auto px-8 py-20 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-24 h-24 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-6">
+              <X className="w-12 h-12 text-red-500" />
+            </div>
+            <h2 className="text-4xl font-extrabold text-red-600 mb-4">Yah, Nyawa Kamu Habis!</h2>
+            <p className="text-gray-600 mb-8 text-lg">Jangan menyerah, ayo coba lagi dan pelajari lebih banyak tentang Bawean.</p>
             
-            <div className="bg-white/90 backdrop-blur-md rounded-[32px] border border-white/60 p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
-              <div className="absolute right-0 top-0 opacity-5 pointer-events-none">
-                <BookOpen className="w-48 h-48 -rotate-12 translate-x-8 -translate-y-8" />
-              </div>
-              
-              <span className="inline-flex text-xs font-black text-[#005C43] bg-emerald-50/80 px-4 py-2 rounded-xl tracking-wider uppercase border border-emerald-100 backdrop-blur-sm">
-                ✨ Susun Kalimat {currentIndex + 1} / {dataset.length}
-              </span>
-              <p className="text-2xl md:text-3xl font-black text-gray-800 mt-6 leading-snug">
-                "{currentRound?.indonesianClue}"
-              </p>
+            <div className="flex gap-4 justify-center">
+              <button onClick={restartGame} className="flex items-center gap-2 bg-[#005C43] text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-opacity">
+                <RotateCcw className="w-5 h-5" /> Main Ulang
+              </button>
+              <Link href="/game" className="flex items-center gap-2 bg-gray-200 text-gray-700 px-8 py-3 rounded-full font-bold hover:bg-gray-300 transition-colors">
+                Kembali
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {isGameFinished && !isGameOver && (
+          <div className="max-w-3xl mx-auto px-8 py-20 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-28 h-28 mx-auto bg-yellow-100 rounded-full flex items-center justify-center mb-6 shadow-sm">
+              <Trophy className="w-14 h-14 text-yellow-600" />
+            </div>
+            <h2 className="text-4xl font-extrabold text-[#005C43] mb-4">Luar Biasa! 🎉</h2>
+            <p className="text-gray-600 mb-6 text-lg">Kamu berhasil menyelesaikan kuis Susun Kata.</p>
+            
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-8 max-w-sm mx-auto shadow-sm">
+              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1">Skor Akhir</h3>
+              <p className="text-5xl font-extrabold text-[#005C43]">{score}</p>
             </div>
 
-            <div className="rounded-[32px] border-4 border-dashed border-emerald-200/60 p-8 min-h-40 flex flex-wrap gap-3 items-center justify-center bg-emerald-50/30 backdrop-blur-sm transition-all duration-300">
-              {selectedWords.length === 0 ? (
-                <div className="flex flex-col items-center opacity-50">
-                   <Blocks className="w-10 h-10 text-[#005C43] mb-2 animate-float" />
-                   <p className="text-[#005C43] text-sm font-bold">Tarik / Klik kata ke area ini</p>
+            <div className="flex gap-4 justify-center">
+              <button onClick={restartGame} className="flex items-center gap-2 bg-white border-2 border-[#005C43] text-[#005C43] px-8 py-3 rounded-full font-bold hover:bg-green-50 transition-colors">
+                <RotateCcw className="w-5 h-5" /> Main Lagi
+              </button>
+              <Link href="/game" className="flex items-center gap-2 bg-[#005C43] text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-colors">
+                Selesai
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!isGameOver && !isGameFinished && (
+          <div className="max-w-7xl mx-auto px-8 py-8">
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h1 className="text-4xl font-extrabold text-[#005C43] mb-1">Game 🎮</h1>
+                <p className="text-gray-700 text-sm">Bermain sambil belajar, selesaikan semua tantangan seru</p>
+              </div>
+              <Link href="/game" className="text-2xl p-2 hover:opacity-70 transition-opacity cursor-pointer">
+                ❌
+              </Link>
+            </div>
+
+            <h2 className="text-3xl font-bold text-[#005C43] mb-6">Susun Kata</h2>
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-gray-200">
+              <div className="flex items-center gap-6">
+                <div className="flex gap-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Heart
+                      key={i}
+                      className={`w-6 h-6 transition-all ${i < lives ? 'fill-red-500 text-red-500' : 'fill-gray-200 text-gray-200'}`}
+                    />
+                  ))}
                 </div>
-              ) : (
-                selectedWords.map((wordObj) => (
-                  <button
-                    key={wordObj.id}
-                    disabled={hasChecked}
-                    onClick={() => handleWordClick(wordObj, true)}
-                    className="bg-[#005C43] text-white font-black px-5 py-3 rounded-xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all text-base"
-                  >
-                    {wordObj.text}
-                  </button>
-                ))
-              )}
-            </div>
-
-            <div className="bg-white rounded-[24px] border-b-4 border-gray-200 p-6 md:p-8 shadow-sm">
-              <div className="flex flex-wrap gap-3 justify-center">
-                {availableWords.map((wordObj) => (
-                  <button
-                    key={wordObj.id}
-                    disabled={hasChecked}
-                    onClick={() => handleWordClick(wordObj, false)}
-                    className="bg-white border-2 border-gray-200 text-gray-700 font-bold px-5 py-3 rounded-xl shadow-[0_4px_0_#e5e7eb] hover:translate-y-1 hover:shadow-none hover:border-[#005C43] hover:text-[#005C43] transition-all text-base"
-                  >
-                    {wordObj.text}
-                  </button>
-                ))}
+                <div className="bg-green-50 px-4 py-1.5 rounded-full border border-green-200 text-[#005C43] font-bold text-sm">
+                  Skor: {score}
+                </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => loadRound(dataset, currentIndex)}
-                  disabled={hasChecked || selectedWords.length === 0}
-                  className="px-6 py-4 border-2 border-gray-200 text-gray-500 font-black rounded-2xl hover:bg-gray-50 transition-colors disabled:opacity-40"
-                >
-                  <RefreshCw className="w-5 h-5 mx-auto" />
-                </button>
-                
-                {!hasChecked ? (
-                  <button
-                    onClick={checkAnswer}
-                    disabled={selectedWords.length === 0}
-                    className="flex-1 bg-[#005C43] text-white font-black text-lg py-4 rounded-2xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Cek Jawaban
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleNextRound}
-                    className="flex-1 bg-[#005C43] text-white font-black text-lg py-4 rounded-2xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all"
-                  >
-                    {currentIndex < dataset.length - 1 ? 'Lanjut ke Soal Berikutnya →' : 'Selesai'}
-                  </button>
-                )}
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-gray-400">
+                  Soal {currentIndex + 1} / {dataset.length}
+                </span>
               </div>
             </div>
 
-            {hasChecked && (
-              <div className={`p-6 rounded-[24px] border-b-4 flex items-start gap-4 animate-in slide-in-from-bottom-4 ${isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                {isCorrect ? <CheckCircle2 className="w-8 h-8 text-green-500 shrink-0" /> : <AlertCircle className="w-8 h-8 text-red-500 shrink-0" />}
-                <div>
-                  <h4 className="font-black text-xl">{isCorrect ? 'Sempurna!' : 'Salah, jangan menyerah!'}</h4>
-                  {!isCorrect && (
-                    <p className="text-sm mt-2 opacity-90 font-medium bg-white/50 p-3 rounded-xl border border-red-100">
-                      <span className="font-bold">Jawaban Benar:</span> "{currentRound.correctSentence}"
-                    </p>
+            {!isAnswered ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="flex items-center justify-center">
+                  <div className="w-full h-64 md:h-80 bg-[#EBF2EE] rounded-[32px] relative overflow-hidden border border-gray-100 shadow-sm flex flex-col items-center justify-center p-8 text-center">
+                    <span className="text-sm font-bold text-[#005C43] uppercase tracking-wide mb-4">Susun menjadi kalimat Bawean:</span>
+                    <h3 className="text-2xl md:text-3xl font-bold text-gray-800">
+                      "{currentRound.indonesianClue}"
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-center">
+                  <div className="space-y-4 mb-8">
+                    {/* Area Drop / Selected Words */}
+                    <div className="w-full min-h-[120px] p-6 rounded-[24px] border-2 border-dashed border-gray-300 bg-gray-50 flex flex-wrap gap-3 items-center justify-center transition-all">
+                      {selectedWords.length === 0 ? (
+                        <p className="text-gray-400 font-medium">Tarik / Klik kata ke area ini</p>
+                      ) : (
+                        selectedWords.map((w) => (
+                          <button 
+                            key={w.id} 
+                            onClick={() => handleWordClick(w, true)} 
+                            className="bg-[#005C43] text-white px-5 py-2.5 rounded-full font-semibold shadow-sm hover:opacity-90 transition-opacity"
+                          >
+                            {w.text}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                    
+                    {/* Area Pilihan / Available Words */}
+                    <div className="flex flex-wrap gap-3 justify-center p-4">
+                      {availableWords.map((w) => (
+                        <button 
+                          key={w.id} 
+                          onClick={() => handleWordClick(w, false)} 
+                          className="bg-white border-2 border-gray-200 text-gray-700 px-5 py-2.5 rounded-full font-semibold hover:border-[#005C43] hover:text-[#005C43] transition-colors"
+                        >
+                          {w.text}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => loadRound(dataset, currentIndex)} 
+                      className="p-3.5 border-2 border-gray-300 rounded-full text-gray-600 hover:bg-gray-100 transition-colors"
+                      title="Ulangi Susunan Kata"
+                    >
+                      <RotateCcw className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={handleCheckAnswer}
+                      disabled={selectedWords.length === 0}
+                      className={`flex-1 w-full md:w-auto px-10 py-3.5 rounded-full font-bold text-white text-base transition-all ${
+                        selectedWords.length > 0
+                          ? 'bg-[#005C43] hover:opacity-95 cursor-pointer shadow-sm'
+                          : 'bg-gray-400 cursor-not-allowed opacity-50'
+                      }`}
+                    >
+                      Cek Jawaban
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="flex flex-col items-center justify-center">
+                  {isCorrect ? (
+                    <div className="text-center animate-in zoom-in-95 duration-300">
+                      <div className="w-24 h-24 mx-auto rounded-full bg-[#005C43] flex items-center justify-center mb-4 shadow-sm">
+                        <Check className="w-14 h-14 text-white" />
+                      </div>
+                      <h3 className="text-4xl font-extrabold text-[#005C43] tracking-wide">BENAR</h3>
+                      <p className="text-green-600 font-bold mt-2">+100 Poin</p>
+                    </div>
+                  ) : (
+                    <div className="text-center animate-in zoom-in-95 duration-300">
+                      <div className="w-24 h-24 mx-auto rounded-full bg-red-500 flex items-center justify-center mb-4 shadow-sm">
+                        <span className="text-4xl text-white font-bold">✕</span>
+                      </div>
+                      <h3 className="text-4xl font-extrabold text-red-600 tracking-wide">SALAH</h3>
+                      <p className="text-red-500 font-bold mt-2">Nyawa Berkurang</p>
+                    </div>
                   )}
+                </div>
+
+                <div className="flex flex-col justify-center">
+                  <h4 className="text-2xl font-bold text-gray-900 mb-4">Jawaban Benar</h4>
+
+                  <div className="bg-green-50 border-l-4 border-[#005C43] rounded-2xl p-6 mb-8 shadow-sm">
+                    <p className="text-xl font-bold text-[#005C43] leading-relaxed">
+                      {currentRound.correctSentence}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleNextQuestion}
+                    className={`w-full md:w-auto px-10 py-3.5 rounded-full font-bold text-white text-base transition-opacity ${
+                       lives <= 0 ? 'bg-red-500 hover:bg-red-600' : 'bg-[#005C43] hover:opacity-95'
+                    }`}
+                  >
+                    {nextButtonText}
+                  </button>
                 </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="bg-white rounded-[32px] border-b-8 border-gray-200 p-8 md:p-12 shadow-lg text-center max-w-xl mx-auto animate-in zoom-in">
-            <h1 className="text-4xl font-black text-[#005C43] mb-4">Sesi Selesai!</h1>
-            <p className="text-gray-500 font-medium mb-8">Kamu telah berhasil menyusun seluruh tata bahasa dengan baik.</p>
-            
-            <div className="bg-emerald-50 rounded-[24px] p-8 border-4 border-emerald-100 mb-8">
-              <p className="text-sm font-black text-[#005C43] uppercase tracking-wider">Total Poin Kamu</p>
-              <p className="text-6xl font-black text-[#005C43] mt-2 drop-shadow-sm">{score}</p>
-            </div>
-
-            <button
-              onClick={resetGame}
-              className="w-full bg-[#005C43] text-white font-black text-lg py-5 rounded-2xl shadow-[0_6px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-3"
-            >
-              <RefreshCw className="w-6 h-6" /> Mainkan Ulang Game
-            </button>
-          </div>
         )}
       </div>
-    </div>
+
+      <Footer />
+    </main>
   )
 }
