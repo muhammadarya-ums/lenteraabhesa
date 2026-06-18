@@ -2,21 +2,26 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, BookOpen, Blocks } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+
+interface WordObject {
+  id: string
+  text: string
+}
 
 interface ScrambleGameFormat {
   id: number
   indonesianClue: string
   correctSentence: string
-  shuffledWords: string[]
+  shuffledWords: WordObject[]
 }
 
 export default function SusunKataPage() {
   const [dataset, setDataset] = useState<ScrambleGameFormat[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [selectedWords, setSelectedWords] = useState<string[]>([])
-  const [availableWords, setAvailableWords] = useState<string[]>([])
+  const [selectedWords, setSelectedWords] = useState<WordObject[]>([])
+  const [availableWords, setAvailableWords] = useState<WordObject[]>([])
   const [score, setScore] = useState(0)
   const [hasChecked, setHasChecked] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
@@ -24,11 +29,9 @@ export default function SusunKataPage() {
   const [loading, setLoading] = useState(true)
   const [shake, setShake] = useState(false)
 
-  // Audio ref untuk jawaban salah
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    // Inisialisasi audio (pastikan path file sesuai dengan folder public lo)
     wrongAudioRef.current = new Audio('/sounds/salah.mp3')
     fetchScrambleData()
   }, [])
@@ -36,7 +39,6 @@ export default function SusunKataPage() {
   const fetchScrambleData = async () => {
     try {
       setLoading(true)
-      // Mengambil dari tabel khusus yang dikelola admin
       const { data: soalData, error } = await supabase
         .from('soal_susun_kata')
         .select('*')
@@ -48,7 +50,13 @@ export default function SusunKataPage() {
       const formatted: ScrambleGameFormat[] = soalData.map((item, idx) => {
         const sentence = item.kalimat_benar!.trim()
         const words = sentence.split(/\s+/).filter((w: string) => w.length > 0)
-        const shuffled = [...words].sort(() => 0.5 - Math.random())
+        
+        const wordObjects: WordObject[] = words.map((w: string, wIdx: number) => ({
+  id: `${item.id || idx}-${wIdx}`,
+  text: w
+}))
+
+        const shuffled = [...wordObjects].sort(() => 0.5 - Math.random())
 
         return {
           id: item.id || idx + 1,
@@ -58,14 +66,12 @@ export default function SusunKataPage() {
         }
       })
 
-      // Acak urutan soal
       const shuffledQuestions = formatted.sort(() => 0.5 - Math.random())
       
       setDataset(shuffledQuestions)
       loadRound(shuffledQuestions, 0)
     } catch (err) {
       console.error('Error fetching data:', err)
-      // Fallback
       setDataset([])
     } finally {
       setLoading(false)
@@ -83,15 +89,15 @@ export default function SusunKataPage() {
     }
   }
 
-  const handleWordClick = (word: string, fromSelected: boolean) => {
+  const handleWordClick = (wordObj: WordObject, fromSelected: boolean) => {
     if (hasChecked) return
 
     if (fromSelected) {
-      setSelectedWords(selectedWords.filter((w) => w !== word))
-      setAvailableWords([...availableWords, word])
+      setSelectedWords(selectedWords.filter((w) => w.id !== wordObj.id))
+      setAvailableWords([...availableWords, wordObj])
     } else {
-      setAvailableWords(availableWords.filter((w) => w !== word))
-      setSelectedWords([...selectedWords, word])
+      setAvailableWords(availableWords.filter((w) => w.id !== wordObj.id))
+      setSelectedWords([...selectedWords, wordObj])
     }
   }
 
@@ -103,7 +109,7 @@ export default function SusunKataPage() {
   }
 
   const checkAnswer = () => {
-    const userString = selectedWords.join(' ').toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+    const userString = selectedWords.map(w => w.text).join(' ').toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
     const targetString = dataset[currentIndex].correctSentence.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
 
     const correct = userString === targetString
@@ -115,7 +121,7 @@ export default function SusunKataPage() {
     } else {
       playWrongSound()
       setShake(true)
-      setTimeout(() => setShake(false), 500) // Hentikan animasi shake
+      setTimeout(() => setShake(false), 500)
     }
   }
 
@@ -160,19 +166,21 @@ export default function SusunKataPage() {
   const currentRound = dataset[currentIndex]
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] py-8 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen relative overflow-hidden bg-linear-to-tr from-[#F0F7F4] via-[#F8F9FA] to-[#E6F0EB] py-8 px-4 sm:px-6 lg:px-8 font-sans">
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-8px); }
+          25 { transform: translateX(-8px); }
           50% { transform: translateX(8px); }
           75% { transform: translateX(-8px); }
         }
         .animate-shake { animation: shake 0.4s ease-in-out; }
       `}} />
 
-      <div className="max-w-3xl mx-auto">
-        {/* Navigation Head */}
+      <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-200/20 rounded-full blur-3xl"></div>
+      <div className="absolute top-1/2 left-0 w-40 h-40 bg-teal-200/20 rounded-full blur-2xl animate-pulse"></div>
+
+      <div className="max-w-3xl mx-auto relative z-10">
         <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-[20px] border-b-4 border-gray-200 shadow-sm">
           <Link href="/game" className="flex items-center text-gray-500 hover:text-[#005C43] font-bold transition-colors">
             <ArrowLeft className="w-5 h-5 mr-2" /> Keluar
@@ -184,50 +192,54 @@ export default function SusunKataPage() {
 
         {!gameFinished ? (
           <div className={`flex flex-col gap-6 transition-transform ${shake ? 'animate-shake' : ''}`}>
-            {/* Clue Panel */}
-            <div className="bg-white rounded-[24px] border-b-4 border-gray-200 p-6 md:p-8 shadow-sm">
-              <span className="text-xs font-black text-[#005C43] bg-emerald-50 px-4 py-1.5 rounded-lg tracking-wider uppercase border border-emerald-100">
-                Susun Kalimat {currentIndex + 1} / {dataset.length}
+            
+            <div className="bg-white/90 backdrop-blur-md rounded-[32px] border border-white/60 p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
+              <div className="absolute right-0 top-0 opacity-5 pointer-events-none">
+                <BookOpen className="w-48 h-48 -rotate-12 translate-x-8 -translate-y-8" />
+              </div>
+              
+              <span className="inline-flex text-xs font-black text-[#005C43] bg-emerald-50/80 px-4 py-2 rounded-xl tracking-wider uppercase border border-emerald-100 backdrop-blur-sm">
+                ✨ Susun Kalimat {currentIndex + 1} / {dataset.length}
               </span>
-              <p className="text-xl md:text-2xl font-black text-gray-800 mt-6 leading-snug">
+              <p className="text-2xl md:text-3xl font-black text-gray-800 mt-6 leading-snug">
                 "{currentRound?.indonesianClue}"
               </p>
             </div>
 
-            {/* Workplace Panel */}
-            <div className="rounded-[24px] border-4 border-dashed border-gray-200 p-8 min-h-[140px] flex flex-wrap gap-3 items-center justify-center bg-gray-50">
+            <div className="rounded-[32px] border-4 border-dashed border-emerald-200/60 p-8 min-h-40 flex flex-wrap gap-3 items-center justify-center bg-emerald-50/30 backdrop-blur-sm transition-all duration-300">
               {selectedWords.length === 0 ? (
-                <p className="text-gray-400 text-sm font-bold">Susun blok kata di area ini</p>
+                <div className="flex flex-col items-center opacity-50">
+                   <Blocks className="w-10 h-10 text-[#005C43] mb-2 animate-float" />
+                   <p className="text-[#005C43] text-sm font-bold">Tarik / Klik kata ke area ini</p>
+                </div>
               ) : (
-                selectedWords.map((word, idx) => (
+                selectedWords.map((wordObj) => (
                   <button
-                    key={idx}
+                    key={wordObj.id}
                     disabled={hasChecked}
-                    onClick={() => handleWordClick(word, true)}
+                    onClick={() => handleWordClick(wordObj, true)}
                     className="bg-[#005C43] text-white font-black px-5 py-3 rounded-xl shadow-[0_4px_0_#004733] hover:translate-y-1 hover:shadow-none transition-all text-base"
                   >
-                    {word}
+                    {wordObj.text}
                   </button>
                 ))
               )}
             </div>
 
-            {/* Word Bank Panel */}
             <div className="bg-white rounded-[24px] border-b-4 border-gray-200 p-6 md:p-8 shadow-sm">
               <div className="flex flex-wrap gap-3 justify-center">
-                {availableWords.map((word, idx) => (
+                {availableWords.map((wordObj) => (
                   <button
-                    key={idx}
+                    key={wordObj.id}
                     disabled={hasChecked}
-                    onClick={() => handleWordClick(word, false)}
+                    onClick={() => handleWordClick(wordObj, false)}
                     className="bg-white border-2 border-gray-200 text-gray-700 font-bold px-5 py-3 rounded-xl shadow-[0_4px_0_#e5e7eb] hover:translate-y-1 hover:shadow-none hover:border-[#005C43] hover:text-[#005C43] transition-all text-base"
                   >
-                    {word}
+                    {wordObj.text}
                   </button>
                 ))}
               </div>
 
-              {/* Action buttons */}
               <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => loadRound(dataset, currentIndex)}
@@ -256,7 +268,6 @@ export default function SusunKataPage() {
               </div>
             </div>
 
-            {/* Answer Feedback Banner */}
             {hasChecked && (
               <div className={`p-6 rounded-[24px] border-b-4 flex items-start gap-4 animate-in slide-in-from-bottom-4 ${isCorrect ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
                 {isCorrect ? <CheckCircle2 className="w-8 h-8 text-green-500 shrink-0" /> : <AlertCircle className="w-8 h-8 text-red-500 shrink-0" />}
@@ -272,7 +283,6 @@ export default function SusunKataPage() {
             )}
           </div>
         ) : (
-          /* Scoring End Phase Screen */
           <div className="bg-white rounded-[32px] border-b-8 border-gray-200 p-8 md:p-12 shadow-lg text-center max-w-xl mx-auto animate-in zoom-in">
             <h1 className="text-4xl font-black text-[#005C43] mb-4">Sesi Selesai!</h1>
             <p className="text-gray-500 font-medium mb-8">Kamu telah berhasil menyusun seluruh tata bahasa dengan baik.</p>

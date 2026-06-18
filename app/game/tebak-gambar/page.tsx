@@ -1,29 +1,23 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Lightbulb, Check } from 'lucide-react'
+import { Heart, Lightbulb, Check, Loader2, X, Trophy, RotateCcw } from 'lucide-react'
 import Image from "next/image"
 import { supabase } from '@/lib/supabase'
 
-// ==========================================
-// 1. INTERFACE: Sesuai Struktur Data Input Game
-// ==========================================
 interface Question {
-  id: number
-  image: string        // 1. Image (Path URL gambar seperti '/deer.png')
-  question: string     // 2. Soal
-  options: { label: string; text: string }[] // 3. Pilihan Jawaban
-  correctAnswer: string // 4. Jawaban Benar ('A', 'B', 'C', atau 'D')
-  hint: string         // 5. Petunjuk (Clue yang muncul saat diklik)
-  explanation: string  // Penjelasan tambahan setelah dijawab
-  culturalFact: string // Fakta budaya terkait soal
+  id: string
+  image: string
+  question: string
+  options: string[]
+  correctAnswer: string
+  hint: string
+  explanation: string
+  culturalFact: string
 }
 
-// ==========================================
-// 2. COMPONENT: Navbar (Sinkronisasi Navigasi)
-// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -67,7 +61,7 @@ const Navbar = () => {
         </button>
 
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? '✕' : '☰'}
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : '☰'}
         </button>
       </div>
 
@@ -97,60 +91,6 @@ const Navbar = () => {
   )
 }
 
-// ==========================================
-// 3. DATA SOURCE: Bank Soal Tebak Gambar
-// ==========================================
-const QUESTIONS: Question[] = [
-  {
-    id: 1,
-    image: '/tebakgambar.png', // Pastikan file gambar ditaruh di folder public/
-    question: 'Apa Bahasa Bawean dari binatang tersebut?',
-    options: [
-      { label: 'A', text: 'Kerbau' },
-      { label: 'B', text: 'Menjhangan' },
-      { label: 'C', text: 'Jaran' },
-      { label: 'D', text: 'Gajah' },
-    ],
-    correctAnswer: 'B',
-    hint: 'Hewan endemik berkaki empat yang lincah dan bertanduk indah.',
-    explanation: 'Manjhangan = Rusa Bawean',
-    culturalFact: 'Rusa Bawean merupakan satwa endemik Pulau Bawean yang dilindungi.',
-  },
-  {
-    id: 2,
-    image: '/rumah.png',
-    question: 'Apa bahasa Bawean untuk rumah tradisional?',
-    options: [
-      { label: 'A', text: 'Omah' },
-      { label: 'B', text: 'Dhukuh' },
-      { label: 'C', text: 'Griya' },
-      { label: 'D', text: 'Pendopo' },
-    ],
-    correctAnswer: 'A',
-    hint: 'Kata ini juga umum digunakan dalam bahasa Jawa halus maupun ngoko untuk bangunan tempat tinggal.',
-    explanation: 'Omah = Rumah Tradisional Bawean',
-    culturalFact: 'Rumah tradisional Bawean memiliki arsitektur unik yang mencerminkan budaya lokal.',
-  },
-  {
-    id: 3,
-    image: '/kuliner.jpg',
-    question: 'Makanan tradisional Bawean dalam bahasa lokal disebut?',
-    options: [
-      { label: 'A', text: 'Lumpia' },
-      { label: 'B', text: 'Dhahhar' },
-      { label: 'C', text: 'Pecel' },
-      { label: 'D', text: 'Rujak' },
-    ],
-    correctAnswer: 'B',
-    hint: 'Istilah sopan/halus yang merujuk pada hidangan makanan atau aktivitas makan.',
-    explanation: 'Dhahhar = Makanan Bawean',
-    culturalFact: 'Kuliner Bawean memiliki cita rasa unik yang dipengaruhi budaya maritim dan pertanian lokal.',
-  },
-]
-
-// ==========================================
-// 4. COMPONENT: Footer
-// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-16">
     <div className="max-w-7xl mx-auto">
@@ -195,211 +135,377 @@ const Footer = () => (
   </footer>
 )
 
-// ==========================================
-// 5. MAIN DEFAULT EXPORT: Tebak Gambar Page
-// ==========================================
 export default function TebakGambarPage() {
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [loading, setLoading] = useState(true)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [isAnswered, setIsAnswered] = useState(false)
+  
   const [lives, setLives] = useState(3)
+  const [score, setScore] = useState(0)
   const [showHint, setShowHint] = useState(false)
+  const [isGameOver, setIsGameOver] = useState(false)
+  const [isGameFinished, setIsGameFinished] = useState(false)
 
-  const currentQuestion = QUESTIONS[currentQuestionIndex]
-  const isCorrect = selectedAnswer === currentQuestion.correctAnswer
+  const wrongAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  const handleAnswerSelect = (label: string) => {
-    if (!isAnswered) {
-      setSelectedAnswer(label)
+  useEffect(() => {
+    wrongAudioRef.current = new Audio('/sounds/salah.mp3')
+    fetchQuestions()
+  }, [])
+
+  const playWrongSound = () => {
+    if (wrongAudioRef.current) {
+      wrongAudioRef.current.currentTime = 0
+      wrongAudioRef.current.play().catch(e => console.log('Audio play failed:', e))
     }
   }
 
-  // FUNGSI BARU: Nembak database saat jawaban benar
+  const fetchQuestions = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.from('soal_tebak_gambar').select('*')  
+      
+      if (error) {
+        console.error("🔴 TERJADI ERROR SUPABASE:", error.message)
+        return
+      }
+
+      if (!data || data.length === 0) {
+        console.log("🟡 Data kosong, belum ada soal dari admin.")
+        return
+      }
+
+      const formatted = data.map((item) => {
+        const allOptions = [
+          item.pengecoh_1,
+          item.pengecoh_2,
+          item.pengecoh_3,
+          item.jawaban_benar
+        ].filter(Boolean)
+
+        const shuffledOptions = [...allOptions].sort(() => 0.5 - Math.random())
+
+        return {
+          id: item.id,
+          image: item.image_url,
+          question: item.pertanyaan,
+          options: shuffledOptions,
+          correctAnswer: item.jawaban_benar,
+          hint: item.clue,
+          explanation: item.penjelasan,
+          culturalFact: item.fakta_budaya
+        }
+      })
+
+      setQuestions(formatted.sort(() => 0.5 - Math.random()))
+    } catch (err) {
+      console.error("Gagal memproses data tebak gambar:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEndGame = async (finalScore: number) => {
+    try {
+      await supabase.from('game_analytics').insert([
+        {
+          game_name: 'tebak_gambar',
+          session_id: navigator.userAgent,
+          score: finalScore
+        }
+      ])
+    } catch (error) {
+      console.error("Gagal mencatat analitik game:", error)
+    }
+  }
+
+  const restartGame = () => {
+    setLives(3)
+    setScore(0)
+    setCurrentQuestionIndex(0)
+    setSelectedAnswer(null)
+    setIsAnswered(false)
+    setShowHint(false)
+    setIsGameOver(false)
+    setIsGameFinished(false)
+    setQuestions(prev => [...prev].sort(() => 0.5 - Math.random()))
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-[#005C43] animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Menyiapkan Gambar Kuis...</p>
+      </div>
+    )
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="bg-gray-50 border border-gray-200 p-8 rounded-2xl text-center max-w-md">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Belum Ada Soal</h2>
+          <p className="text-gray-500 font-medium mb-6">Soal Tebak Gambar belum tersedia dari Admin.</p>
+          <Link href="/game" className="px-8 py-3 bg-[#005C43] text-white rounded-full font-bold hover:opacity-90 inline-block transition-opacity">
+            Kembali ke Menu Game
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const currentQuestion = questions[currentQuestionIndex]
+  const isCorrect = selectedAnswer === currentQuestion.correctAnswer
+
+  const handleAnswerSelect = (optionText: string) => {
+    if (!isAnswered) {
+      setSelectedAnswer(optionText)
+    }
+  }
+
   const handleCheckAnswer = async () => {
     if (!selectedAnswer) return
     setIsAnswered(true)
 
     if (selectedAnswer === currentQuestion.correctAnswer) {
-      // INJEKSI TRACKER GAME: Kirim riwayat saat sukses jawab ke Supabase
-      try {
-        await supabase.from('permainan').insert([{ jenis_game: 'tebak_gambar' }])
-      } catch (error) {
-        console.error("Gagal tracking game:", error)
-      }
+      setScore(prev => prev + 100)
     } else {
-      if (lives > 1) {
-        setLives(lives - 1)
+      playWrongSound()
+      const newLives = lives - 1
+      setLives(newLives)
+      if (newLives <= 0) {
+        setTimeout(() => {
+          setIsGameOver(true)
+          handleEndGame(score)
+        }, 1000)
       }
     }
   }
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < QUESTIONS.length - 1) {
+    if (lives <= 0) {
+      setIsGameOver(true)
+      return
+    }
+
+    if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
       setSelectedAnswer(null)
       setIsAnswered(false)
       setShowHint(false)
+    } else {
+      setIsGameFinished(true)
+      handleEndGame(score)
     }
   }
+
+  let nextButtonText = 'Lanjutkan →'
+  if (lives <= 0) nextButtonText = 'Akhiri Permainan'
+  else if (currentQuestionIndex >= questions.length - 1) nextButtonText = 'Selesai'
 
   return (
     <main className="w-full min-h-screen bg-white flex flex-col justify-between">
       <div>
-        {/* Render Navbar */}
         <Navbar />
 
-        {/* Content Container */}
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          {/* Main Top Header */}
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <h1 className="text-4xl font-extrabold text-[#005C43] mb-1">Game 🎮</h1>
-              <p className="text-gray-700 text-sm">Bermain sambil belajar, selesaikan semua tantangan seru</p>
+        {isGameOver && (
+          <div className="max-w-3xl mx-auto px-8 py-20 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-24 h-24 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-6">
+              <X className="w-12 h-12 text-red-500" />
             </div>
-            {/* Tombol X Kembali ke Menu Game */}
-            <Link href="/game" className="text-2xl p-2 hover:opacity-70 transition-opacity cursor-pointer">
-              ❌
-            </Link>
-          </div>
-
-          {/* Quiz Title */}
-          <h2 className="text-3xl font-bold text-[#005C43] mb-6">Tebak Gambar</h2>
-
-          {/* Lives & Clue Action Bar */}
-          <div className="flex justify-between items-center mb-8 pb-6 border-b border-gray-200">
-            <div className="flex gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Heart
-                  key={i}
-                  className={`w-6 h-6 ${i < lives ? 'fill-red-500 text-red-500' : 'text-gray-300'}`}
-                />
-              ))}
+            <h2 className="text-4xl font-extrabold text-red-600 mb-4">Yah, Nyawa Kamu Habis!</h2>
+            <p className="text-gray-600 mb-8 text-lg">Jangan menyerah, ayo coba lagi dan pelajari lebih banyak tentang Bawean.</p>
+            
+            <div className="flex gap-4 justify-center">
+              <button onClick={restartGame} className="flex items-center gap-2 bg-[#005C43] text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-opacity">
+                <RotateCcw className="w-5 h-5" /> Main Ulang
+              </button>
+              <Link href="/game" className="flex items-center gap-2 bg-gray-200 text-gray-700 px-8 py-3 rounded-full font-bold hover:bg-gray-300 transition-colors">
+                Kembali
+              </Link>
             </div>
-            <button
-              onClick={() => setShowHint(!showHint)}
-              className="flex items-center gap-2 bg-yellow-100 text-yellow-700 px-5 py-2.5 rounded-full font-bold text-sm hover:bg-yellow-200 transition-colors"
-            >
-              <Lightbulb className="w-4 h-4" />
-              Petunjuk
-            </button>
           </div>
+        )}
 
-          {/* Interactive Workspace Area */}
-          {!isAnswered ? (
-            /* ==========================================================
-               A. QUESTION STATE (Sebelum Cek Jawaban)
-               ========================================================== */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* IMAGE HOUSING BLOCK */}
-              <div className="flex items-center justify-center">
-                <div className="w-full h-64 md:h-80 bg-[#EBF2EE] rounded-[32px] relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
-                  <Image 
-                    src={currentQuestion.image} 
-                    alt="Soal Tebak Gambar" 
-                    fill
-                    className="object-contain p-6"
-                    sizes="(max-w-lg) 100vw, 500px"
-                    priority
-                  />
-                </div>
+        {isGameFinished && !isGameOver && (
+          <div className="max-w-3xl mx-auto px-8 py-20 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-28 h-28 mx-auto bg-yellow-100 rounded-full flex items-center justify-center mb-6 shadow-sm">
+              <Trophy className="w-14 h-14 text-yellow-600" />
+            </div>
+            <h2 className="text-4xl font-extrabold text-[#005C43] mb-4">Luar Biasa! 🎉</h2>
+            <p className="text-gray-600 mb-6 text-lg">Kamu berhasil menyelesaikan kuis Tebak Gambar.</p>
+            
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-8 max-w-sm mx-auto shadow-sm">
+              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1">Skor Akhir</h3>
+              <p className="text-5xl font-extrabold text-[#005C43]">{score}</p>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <button onClick={restartGame} className="flex items-center gap-2 bg-white border-2 border-[#005C43] text-[#005C43] px-8 py-3 rounded-full font-bold hover:bg-green-50 transition-colors">
+                <RotateCcw className="w-5 h-5" /> Main Lagi
+              </button>
+              <Link href="/game" className="flex items-center gap-2 bg-[#005C43] text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-colors">
+                Selesai
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!isGameOver && !isGameFinished && (
+          <div className="max-w-7xl mx-auto px-8 py-8">
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h1 className="text-4xl font-extrabold text-[#005C43] mb-1">Game 🎮</h1>
+                <p className="text-gray-700 text-sm">Bermain sambil belajar, selesaikan semua tantangan seru</p>
               </div>
+              <Link href="/game" className="text-2xl p-2 hover:opacity-70 transition-opacity cursor-pointer">
+                ❌
+              </Link>
+            </div>
 
-              {/* DETAILS & OPTIONS PANEL */}
-              <div className="flex flex-col justify-center">
-                <h3 className="text-2xl font-bold text-gray-800 mb-8">{currentQuestion.question}</h3>
+            <h2 className="text-3xl font-bold text-[#005C43] mb-6">Tebak Gambar</h2>
 
-                {/* Clue Prompt Box */}
-                {showHint && (
-                  <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-xl animate-in fade-in duration-300">
-                    <p className="text-sm text-yellow-800 leading-relaxed">
-                      <strong>💡 Clue Petunjuk:</strong> {currentQuestion.hint}
-                    </p>
-                  </div>
-                )}
-
-                {/* Multiple Choices Option Grid */}
-                <div className="space-y-3 mb-8">
-                  {currentQuestion.options.map((option) => (
-                    <button
-                      key={option.label}
-                      onClick={() => handleAnswerSelect(option.label)}
-                      className={`w-full text-left p-4 rounded-full border-2 font-semibold transition-all duration-200 ${
-                        selectedAnswer === option.label
-                          ? 'border-[#005C43] bg-green-50 text-[#005C43]'
-                          : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                      }`}
-                    >
-                      <span className="text-[#005C43] font-bold mr-1">{option.label}.</span> {option.text}
-                    </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-gray-200">
+              <div className="flex items-center gap-6">
+                <div className="flex gap-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Heart
+                      key={i}
+                      className={`w-6 h-6 transition-all ${i < lives ? 'fill-red-500 text-red-500' : 'fill-gray-200 text-gray-200'}`}
+                    />
                   ))}
                 </div>
+                <div className="bg-green-50 px-4 py-1.5 rounded-full border border-green-200 text-[#005C43] font-bold text-sm">
+                  Skor: {score}
+                </div>
+              </div>
 
-                {/* Form Action Submit Button */}
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-gray-400">
+                  Soal {currentQuestionIndex + 1} / {questions.length}
+                </span>
                 <button
-                  onClick={handleCheckAnswer}
-                  disabled={!selectedAnswer}
-                  className={`w-full md:w-auto px-10 py-3.5 rounded-full font-bold text-white text-base transition-all ${
-                    selectedAnswer
-                      ? 'bg-[#005C43] hover:opacity-95 cursor-pointer shadow-sm'
-                      : 'bg-gray-400 cursor-not-allowed opacity-50'
+                  onClick={() => setShowHint(!showHint)}
+                  disabled={isAnswered}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-colors ${
+                    isAnswered ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                   }`}
                 >
-                  Cek Jawaban
+                  <Lightbulb className="w-4 h-4" />
+                  Petunjuk
                 </button>
               </div>
             </div>
-          ) : (
-            /* ==========================================================
-               B. ANSWER RESULT STATE (Setelah Cek Jawaban Klik)
-               ========================================================== */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Feedback State Graphic */}
-              <div className="flex flex-col items-center justify-center">
-                {isCorrect ? (
-                  <div className="text-center animate-in zoom-in-95 duration-300">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-[#005C43] flex items-center justify-center mb-4 shadow-sm">
-                      <Check className="w-14 h-14 text-white" />
-                    </div>
-                    <h3 className="text-4xl font-extrabold text-[#005C43] tracking-wide">BENAR</h3>
-                  </div>
-                ) : (
-                  <div className="text-center animate-in zoom-in-95 duration-300">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-red-500 flex items-center justify-center mb-4 shadow-sm">
-                      <span className="text-4xl text-white font-bold">✕</span>
-                    </div>
-                    <h3 className="text-4xl font-extrabold text-red-600 tracking-wide">SALAH</h3>
-                  </div>
-                )}
-              </div>
 
-              {/* Cultural Context Details Panel */}
-              <div className="flex flex-col justify-center">
-                <h4 className="text-2xl font-bold text-gray-900 mb-4">{currentQuestion.explanation}</h4>
-
-                {/* Info Card Block */}
-                <div className="bg-green-50 border-l-4 border-[#005C43] rounded-2xl p-6 mb-8 shadow-xs">
-                  <h5 className="font-bold text-[#005C43] text-base mb-2">Fakta Budaya:</h5>
-                  <p className="text-gray-700 text-sm leading-relaxed">{currentQuestion.culturalFact}</p>
+            {!isAnswered ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="flex items-center justify-center">
+                  <div className="w-full h-64 md:h-80 bg-[#EBF2EE] rounded-[32px] relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
+                    {currentQuestion.image ? (
+                      <Image 
+                        src={currentQuestion.image} 
+                        alt="Soal Tebak Gambar" 
+                        fill
+                        className="object-contain p-6"
+                        sizes="(max-w-lg) 100vw, 500px"
+                        priority
+                      />
+                    ) : (
+                      <p className="text-gray-400 font-medium">Gambar tidak tersedia</p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Pagination Sequence Control */}
-                <button
-                  onClick={handleNextQuestion}
-                  className={`w-full md:w-auto px-10 py-3.5 rounded-full font-bold text-white text-base transition-opacity ${
-                    currentQuestionIndex < QUESTIONS.length - 1
-                      ? 'bg-[#005C43] hover:opacity-95'
-                      : 'bg-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {currentQuestionIndex < QUESTIONS.length - 1 ? 'Lanjutkan →' : 'Selesai'}
-                </button>
+                <div className="flex flex-col justify-center">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-8">{currentQuestion.question}</h3>
+
+                  {showHint && (
+                    <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-xl animate-in fade-in duration-300">
+                      <p className="text-sm text-yellow-800 leading-relaxed">
+                        <strong>💡 Clue Petunjuk:</strong> {currentQuestion.hint}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-8">
+                    {currentQuestion.options.map((option, index) => {
+                      const label = String.fromCharCode(65 + index);
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => handleAnswerSelect(option)}
+                          className={`w-full text-left p-4 rounded-full border-2 font-semibold transition-all duration-200 ${
+                            selectedAnswer === option
+                              ? 'border-[#005C43] bg-green-50 text-[#005C43]'
+                              : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                          }`}
+                        >
+                          <span className="text-[#005C43] font-bold mr-1">{label}.</span> {option}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <button
+                    onClick={handleCheckAnswer}
+                    disabled={!selectedAnswer}
+                    className={`w-full md:w-auto px-10 py-3.5 rounded-full font-bold text-white text-base transition-all ${
+                      selectedAnswer
+                        ? 'bg-[#005C43] hover:opacity-95 cursor-pointer shadow-sm'
+                        : 'bg-gray-400 cursor-not-allowed opacity-50'
+                    }`}
+                  >
+                    Cek Jawaban
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="flex flex-col items-center justify-center">
+                  {isCorrect ? (
+                    <div className="text-center animate-in zoom-in-95 duration-300">
+                      <div className="w-24 h-24 mx-auto rounded-full bg-[#005C43] flex items-center justify-center mb-4 shadow-sm">
+                        <Check className="w-14 h-14 text-white" />
+                      </div>
+                      <h3 className="text-4xl font-extrabold text-[#005C43] tracking-wide">BENAR</h3>
+                      <p className="text-green-600 font-bold mt-2">+100 Poin</p>
+                    </div>
+                  ) : (
+                    <div className="text-center animate-in zoom-in-95 duration-300">
+                      <div className="w-24 h-24 mx-auto rounded-full bg-red-500 flex items-center justify-center mb-4 shadow-sm">
+                        <span className="text-4xl text-white font-bold">✕</span>
+                      </div>
+                      <h3 className="text-4xl font-extrabold text-red-600 tracking-wide">SALAH</h3>
+                      <p className="text-red-500 font-bold mt-2">Nyawa Berkurang</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col justify-center">
+                  <h4 className="text-2xl font-bold text-gray-900 mb-4">{currentQuestion.explanation}</h4>
+
+                  <div className="bg-green-50 border-l-4 border-[#005C43] rounded-2xl p-6 mb-8 shadow-sm">
+                    <h5 className="font-bold text-[#005C43] text-base mb-2">Fakta Budaya:</h5>
+                    <p className="text-gray-700 text-sm leading-relaxed">{currentQuestion.culturalFact}</p>
+                  </div>
+
+                  <button
+                    onClick={handleNextQuestion}
+                    className={`w-full md:w-auto px-10 py-3.5 rounded-full font-bold text-white text-base transition-opacity ${
+                       lives <= 0 ? 'bg-red-500 hover:bg-red-600' : 'bg-[#005C43] hover:opacity-95'
+                    }`}
+                  >
+                    {nextButtonText}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Render Footer */}
       <Footer />
     </main>
   )

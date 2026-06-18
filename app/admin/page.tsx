@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { 
-  LogOut, Activity, BookOpen, FileText, ShoppingBag, Users, Gamepad2,
+  LogOut, Activity, BookOpen, FileText, ShoppingBag, Users as UsersIcon, Gamepad2,
   Loader2, UserCircle, Plus, Trash2, Volume2, Edit3, Search, X, Menu,
   Save
 } from 'lucide-react'
@@ -21,19 +21,15 @@ interface KamusItem {
   kata_sedang: string | null 
   kata_kasar: string | null
   arti_indonesia: string
-  
   contoh_kalimat_alos: string | null
   arti_contoh_alos: string | null
   pelafalan_kalimat_alos: string | null
-  
   contoh_kalimat_sedang: string | null
   arti_contoh_sedang: string | null
   pelafalan_kalimat_sedang: string | null
-  
   contoh_kalimat_kasar: string | null
   arti_contoh_kasar: string | null
   pelafalan_kalimat_kasar: string | null
-  
   pelafalan_alos: string | null
   pelafalan_sedang: string | null
   pelafalan_kasar: string | null
@@ -54,9 +50,13 @@ interface SusunKataItem {
   id: string; clue_indonesia: string; kalimat_benar: string;
 }
 
-// ==========================================
+interface TebakGambarItem {
+  id: string | number; image_url: string; question: string;
+  jawaban_benar: string; pengecoh_1: string; pengecoh_2: string;
+  pengecoh_3: string; hint: string; explanation: string; cultural_fact: string;
+}
+
 // MAIN COMPONENT
-// ==========================================
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -70,6 +70,7 @@ export default function AdminDashboardPage() {
   const [sejarahList, setSejarahList] = useState<SejarahItem[]>([])
   const [tkList, setTkList] = useState<TebakKataItem[]>([])
   const [skList, setSkList] = useState<SusunKataItem[]>([])
+  const [tgList, setTgList] = useState<TebakGambarItem[]>([])
   
   // ANALYTICS STATES
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'jam' | 'hari' | 'minggu' | 'bulan'>('hari')
@@ -87,16 +88,14 @@ export default function AdminDashboardPage() {
   const [editingSejarahId, setEditingSejarahId] = useState<string | null>(null)
   const [editingTkId, setEditingTkId] = useState<string | null>(null)
   const [editingSkId, setEditingSkId] = useState<string | null>(null)
+  const [editingTgId, setEditingTgId] = useState<string | null>(null)
 
   // KAMUS FORM STATES
   const [artiIndo, setArtiIndo] = useState('')
-  // Halus
   const [kataAlos, setKataAlos] = useState(''); const [contohAlos, setContohAlos] = useState(''); const [artiContohAlos, setArtiContohAlos] = useState('');
   const [audioAlos, setAudioAlos] = useState<File | null>(null); const [audioContohAlos, setAudioContohAlos] = useState<File | null>(null);
-  // Sedang
   const [kataSedang, setKataSedang] = useState(''); const [contohSedang, setContohSedang] = useState(''); const [artiContohSedang, setArtiContohSedang] = useState('');
   const [audioSedang, setAudioSedang] = useState<File | null>(null); const [audioContohSedang, setAudioContohSedang] = useState<File | null>(null);
-  // Kasar
   const [kataKasar, setKataKasar] = useState(''); const [contohKasar, setContohKasar] = useState(''); const [artiContohKasar, setArtiContohKasar] = useState('');
   const [audioKasar, setAudioKasar] = useState<File | null>(null); const [audioContohKasar, setAudioContohKasar] = useState<File | null>(null);
 
@@ -106,13 +105,13 @@ export default function AdminDashboardPage() {
   const [penulisArtikel, setPenulisArtikel] = useState(''); const [coverFile, setCoverFile] = useState<File | null>(null);
 
   // GAME FORM STATES
-  const [activeGameTab, setActiveGameTab] = useState<'tebak_kata' | 'susun_kata'>('tebak_kata')
+  const [activeGameTab, setActiveGameTab] = useState<'tebak_gambar' | 'tebak_kata' | 'susun_kata'>('tebak_gambar')
   const [tkForm, setTkForm] = useState({ kata_soal: '', jawaban_benar: '', pengecoh_1: '', pengecoh_2: '', pengecoh_3: '', clue_kalimat: '', arti_clue: '' })
   const [skForm, setSkForm] = useState({ clue_indonesia: '', kalimat_benar: '' })
+  const [tgForm, setTgForm] = useState({ image_url: '', question: '', jawaban_benar: '', pengecoh_1: '', pengecoh_2: '', pengecoh_3: '', hint: '', explanation: '', cultural_fact: '' })
+  const [tgImageFile, setTgImageFile] = useState<File | null>(null)
 
-  // ==========================================
   // FETCHERS
-  // ==========================================
   const fetchKamus = async () => {
     const { data } = await supabase.from('kamus').select('*').order('created_at', { ascending: false })
     if (data) setKamusList(data as KamusItem[])
@@ -122,9 +121,12 @@ export default function AdminDashboardPage() {
     if (data) setSejarahList(data as SejarahItem[])
   }
   const fetchGames = async () => {
+    const { data: tg } = await supabase.from('soal_tebak_gambar').select('*').order('created_at', { ascending: false })
     const { data: tk } = await supabase.from('soal_tebak_kata').select('*').order('created_at', { ascending: false })
     const { data: sk } = await supabase.from('soal_susun_kata').select('*').order('created_at', { ascending: false })
-    if (tk) setTkList(tk as TebakKataItem[]); if (sk) setSkList(sk as SusunKataItem[]);
+    if (tg) setTgList(tg as TebakGambarItem[]);
+    if (tk) setTkList(tk as TebakKataItem[]); 
+    if (sk) setSkList(sk as SusunKataItem[]);
   }
 
   useEffect(() => {
@@ -155,7 +157,6 @@ export default function AdminDashboardPage() {
   }, [router])
 
   useEffect(() => {
-    // Generate Dashboard Chart logic (unchanged)
     const generateChartData = async () => {
       try {
         let startIso: string; let endIso: string;
@@ -209,7 +210,7 @@ export default function AdminDashboardPage() {
     if (!file) return null;
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${file.name.split('.').pop()}`
     const { error } = await supabase.storage.from(bucket).upload(fileName, file)
-    if (error) throw error
+    if (error) throw new Error(`Gagal upload file: ${error.message}`)
     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName)
     return publicUrl
   }
@@ -241,7 +242,6 @@ export default function AdminDashboardPage() {
     if (!artiIndo || (!kataAlos && !kataSedang && !kataKasar)) return alert('Minimal isi 1 jenis kata Bawean dan Arti Indonesia!')
     setSubmitLoading(true)
     try {
-      // Uploading all possible 6 audio files concurrently
       const [uAlos, uSedang, uKasar, uCAlos, uCSedang, uCKasar] = await Promise.all([
         uploadFile(audioAlos, 'audio-pelafalan'), uploadFile(audioSedang, 'audio-pelafalan'), uploadFile(audioKasar, 'audio-pelafalan'),
         uploadFile(audioContohAlos, 'audio-pelafalan'), uploadFile(audioContohSedang, 'audio-pelafalan'), uploadFile(audioContohKasar, 'audio-pelafalan')
@@ -256,10 +256,17 @@ export default function AdminDashboardPage() {
       if (uAlos) payload.pelafalan_alos = uAlos; if (uSedang) payload.pelafalan_sedang = uSedang; if (uKasar) payload.pelafalan_kasar = uKasar;
       if (uCAlos) payload.pelafalan_kalimat_alos = uCAlos; if (uCSedang) payload.pelafalan_kalimat_sedang = uCSedang; if (uCKasar) payload.pelafalan_kalimat_kasar = uCKasar;
 
-      if (editingKamusId) { await supabase.from('kamus').update(payload).eq('id', editingKamusId); alert('Kosakata diperbarui!'); } 
-      else { await supabase.from('kamus').insert([payload]); alert('Kosakata ditambahkan!'); }
+      if (editingKamusId) { 
+        const { error } = await supabase.from('kamus').update(payload).eq('id', editingKamusId); 
+        if (error) throw error;
+        alert('Kosakata diperbarui!'); 
+      } else { 
+        const { error } = await supabase.from('kamus').insert([payload]); 
+        if (error) throw error;
+        alert('Kosakata ditambahkan!'); 
+      }
       resetFormKamus(); fetchKamus();
-    } catch (err: any) { alert(`Error: ${err.message}`) } finally { setSubmitLoading(false) }
+    } catch (err: any) { alert(`Error Database: ${err.message}`) } finally { setSubmitLoading(false) }
   }
 
   // ==========================================
@@ -282,10 +289,18 @@ export default function AdminDashboardPage() {
       const slug = judulArtikel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
       const payload: any = { kategori: kategoriArtikel, judul: judulArtikel, slug, konten: kontenArtikel, penulis: penulisArtikel }
       if (coverUrl) payload.gambar_url = coverUrl
-      if (editingSejarahId) { await supabase.from('sejarah').update(payload).eq('id', editingSejarahId); alert('Artikel diperbarui!'); } 
-      else { await supabase.from('sejarah').insert([payload]); alert('Artikel diterbitkan!'); }
+      
+      if (editingSejarahId) { 
+        const { error } = await supabase.from('sejarah').update(payload).eq('id', editingSejarahId); 
+        if (error) throw error;
+        alert('Artikel diperbarui!'); 
+      } else { 
+        const { error } = await supabase.from('sejarah').insert([payload]); 
+        if (error) throw error;
+        alert('Artikel diterbitkan!'); 
+      }
       resetFormSejarah(); fetchSejarah();
-    } catch (err: any) { alert(`Error: ${err.message}`) } finally { setSubmitLoading(false) }
+    } catch (err: any) { alert(`Error Database: ${err.message}`) } finally { setSubmitLoading(false) }
   }
 
   // ==========================================
@@ -293,34 +308,120 @@ export default function AdminDashboardPage() {
   // ==========================================
   const resetFormTk = () => { setEditingTkId(null); setTkForm({ kata_soal: '', jawaban_benar: '', pengecoh_1: '', pengecoh_2: '', pengecoh_3: '', clue_kalimat: '', arti_clue: '' }) }
   const resetFormSk = () => { setEditingSkId(null); setSkForm({ clue_indonesia: '', kalimat_benar: '' }) }
+  const resetFormTg = () => { setEditingTgId(null); setTgImageFile(null); setTgForm({ image_url: '', question: '', jawaban_benar: '', pengecoh_1: '', pengecoh_2: '', pengecoh_3: '', hint: '', explanation: '', cultural_fact: '' }); clearFileInputs(); }
   
   const handleEditTk = (item: TebakKataItem) => { setEditingTkId(item.id); setTkForm(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   const handleEditSk = (item: SusunKataItem) => { setEditingSkId(item.id); setSkForm(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  const handleEditTg = (item: TebakGambarItem) => {
+    setEditingTgId(String(item.id));
+    setTgForm({
+      image_url: item.image_url || '',
+      question: item.question || '',
+      jawaban_benar: item.jawaban_benar || '',
+      pengecoh_1: item.pengecoh_1 || '',
+      pengecoh_2: item.pengecoh_2 || '',
+      pengecoh_3: item.pengecoh_3 || '',
+      hint: item.hint || '',
+      explanation: item.explanation || '',
+      cultural_fact: item.cultural_fact || ''
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // PERBAIKAN UTAMA: Tambahan error checking eksplisit dari Supabase
+  const handleSubmitTg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitLoading(true);
+    try {
+      let finalImageUrl = editingTgId ? tgList.find(i => String(i.id) === editingTgId)?.image_url : '';
+      
+      if (tgImageFile) {
+        const imageUrl = await uploadFile(tgImageFile, 'game-assets');
+        if (imageUrl) finalImageUrl = imageUrl;
+      }
+
+      if (!finalImageUrl) throw new Error("Gambar wajib diunggah!");
+
+      // Pastikan struktur payload sama dengan kolom yang ada di database Anda
+      // Gunakan || null agar database tidak error jika kolom kosong tapi required
+      const payload = {
+        image_url: finalImageUrl,
+        question: tgForm.question,
+        jawaban_benar: tgForm.jawaban_benar,
+        pengecoh_1: tgForm.pengecoh_1,
+        pengecoh_2: tgForm.pengecoh_2,
+        pengecoh_3: tgForm.pengecoh_3,
+        hint: tgForm.hint || null,
+        explanation: tgForm.explanation || null,
+        cultural_fact: tgForm.cultural_fact || null
+      };
+      
+      if (editingTgId) {
+        const { error } = await supabase.from('soal_tebak_gambar').update(payload).eq('id', editingTgId);
+        if (error) throw error; // Wajib di-throw agar lari ke Catch block
+      } else {
+        const { error } = await supabase.from('soal_tebak_gambar').insert([payload]);
+        if (error) throw error; // Wajib di-throw agar lari ke Catch block
+      }
+      
+      alert('Soal Tebak Gambar Berhasil Disimpan!');
+      resetFormTg(); fetchGames();
+    } catch (err: any) {
+      console.error("Supabase Error Data:", err);
+      alert(`Gagal menyimpan ke Database: ${err.message || 'Terjadi kesalahan tidak dikenal'}`);
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
   const handleSubmitTk = async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitLoading(true);
     try {
-      if (editingTkId) await supabase.from('soal_tebak_kata').update(tkForm).eq('id', editingTkId)
-      else await supabase.from('soal_tebak_kata').insert([tkForm])
+      // Set nilai default ke null jika string kosong agar lebih konsisten di database
+      const payload = {
+        ...tkForm,
+        clue_kalimat: tkForm.clue_kalimat || null,
+        arti_clue: tkForm.arti_clue || null
+      };
+
+      if (editingTkId) {
+        const { error } = await supabase.from('soal_tebak_kata').update(payload).eq('id', editingTkId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('soal_tebak_kata').insert([payload]);
+        if (error) throw error;
+      }
+      
       resetFormTk(); fetchGames(); alert('Soal Tebak Kata Berhasil Disimpan!');
-    } catch (err: any) { alert(err.message) } finally { setSubmitLoading(false) }
+    } catch (err: any) { alert(`Error Database: ${err.message}`) } finally { setSubmitLoading(false) }
   }
 
   const handleSubmitSk = async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitLoading(true);
     try {
-      if (editingSkId) await supabase.from('soal_susun_kata').update(skForm).eq('id', editingSkId)
-      else await supabase.from('soal_susun_kata').insert([skForm])
+      if (editingSkId) {
+        const { error } = await supabase.from('soal_susun_kata').update(skForm).eq('id', editingSkId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('soal_susun_kata').insert([skForm]);
+        if (error) throw error;
+      }
       resetFormSk(); fetchGames(); alert('Soal Susun Kata Berhasil Disimpan!');
-    } catch (err: any) { alert(err.message) } finally { setSubmitLoading(false) }
+    } catch (err: any) { alert(`Error Database: ${err.message}`) } finally { setSubmitLoading(false) }
   }
 
-  const handleDelete = async (table: string, id: string) => {
+  const handleDelete = async (table: string, id: string | number) => {
     if (confirm('Yakin ingin menghapus permanen?')) {
-      await supabase.from(table).delete().eq('id', id)
-      if (table === 'kamus') fetchKamus()
-      else if (table === 'sejarah') fetchSejarah()
-      else fetchGames()
+      try {
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        if (error) throw error;
+
+        if (table === 'kamus') fetchKamus()
+        else if (table === 'sejarah') fetchSejarah()
+        else fetchGames()
+      } catch (err: any) {
+        alert(`Gagal menghapus: ${err.message}`);
+      }
     }
   }
 
@@ -342,7 +443,7 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
-      <aside className={`fixed md:sticky top-0 left-0 h-screen w-[280px] bg-white border-r border-gray-100 p-6 shadow-xl md:shadow-none z-40 transition-transform duration-300 ease-in-out flex flex-col justify-between overflow-y-auto custom-scrollbar ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <aside className={`fixed md:sticky top-0 left-0 h-screen w-70 bg-white border-r border-gray-100 p-6 shadow-xl md:shadow-none z-40 transition-transform duration-300 ease-in-out flex flex-col justify-between overflow-y-auto custom-scrollbar ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="flex flex-col gap-8 md:gap-10">
           <h2 className="hidden md:block text-[20px] font-black text-[#005C43] mb-2">LENTERA ADMIN</h2>
           <div className="flex items-center gap-3 p-3 bg-[#FAFBFB] border border-gray-100 rounded-xl">
@@ -385,14 +486,14 @@ export default function AdminDashboardPage() {
 
         <div className="p-4 md:p-10 pb-20 w-full overflow-x-hidden">
           
-          {/* TAB 1: DASHBOARD (Kode Analitik Tetap Sama Seperti Sebelumnya) */}
+          {/* TAB 1: DASHBOARD */}
           {activeMenu === 'dashboard' && (
              <div className="space-y-6">
              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
                {[
                  { label: 'Total Kosakata', value: kamusList.length, icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                  { label: 'Artikel Terbit', value: sejarahList.length, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-                 { label: 'Total Pengunjung', value: totalPengunjung, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
+                 { label: 'Total Pengunjung', value: totalPengunjung, icon: UsersIcon, color: 'text-purple-600', bg: 'bg-purple-50' },
                  { label: 'Total Game Dimainkan', value: totalGame, icon: Gamepad2, color: 'text-orange-600', bg: 'bg-orange-50' },
                ].map((stat, i) => (
                  <div key={i} className="bg-white p-5 md:p-6 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4">
@@ -421,7 +522,7 @@ export default function AdminDashboardPage() {
                    </div>
                  </div>
                </div>
-               <div className="h-[300px] w-full"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} dx={10} allowDecimals={false} /><Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} /><Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} /><Line type="monotone" dataKey="Pengunjung" stroke="#8B5CF6" strokeWidth={3} dot={false} /><Line type="monotone" dataKey="Kamus" stroke="#10B981" strokeWidth={3} dot={false} /><Line type="monotone" dataKey="Game" stroke="#F97316" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer></div>
+               <div className="h-75 w-full"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10}} dx={10} allowDecimals={false} /><Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} /><Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} /><Line type="monotone" dataKey="Pengunjung" stroke="#8B5CF6" strokeWidth={3} dot={false} /><Line type="monotone" dataKey="Kamus" stroke="#10B981" strokeWidth={3} dot={false} /><Line type="monotone" dataKey="Game" stroke="#F97316" strokeWidth={3} dot={false} /></LineChart></ResponsiveContainer></div>
              </div>
            </div>
           )}
@@ -541,9 +642,62 @@ export default function AdminDashboardPage() {
             <div className="space-y-6">
               {/* Tab Selector */}
               <div className="flex gap-4 border-b border-gray-200">
+                <button onClick={() => setActiveGameTab('tebak_gambar')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'tebak_gambar' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Tebak Gambar</button>
                 <button onClick={() => setActiveGameTab('tebak_kata')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'tebak_kata' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Tebak Kata</button>
                 <button onClick={() => setActiveGameTab('susun_kata')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'susun_kata' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Susun Kata</button>
               </div>
+
+              {activeGameTab === 'tebak_gambar' && (
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6 items-start">
+                  <form onSubmit={handleSubmitTg} className="bg-white border border-gray-100 p-6 rounded-[24px] shadow-sm space-y-4">
+                    <h2 className="text-lg font-black text-gray-900 mb-4">{editingTgId ? 'Edit Soal Tebak Gambar' : 'Tambah Soal Tebak Gambar'}</h2>
+                    
+                    <div className="md:col-span-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase">Upload Gambar Soal *</label>
+                      <input type="file" accept="image/*" onChange={(e) => setTgImageFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-[#EBF2EF] file:text-[#005C43]" />
+                      {tgForm.image_url && !tgImageFile && (
+                        <img src={tgForm.image_url} alt="Preview" className="mt-2 h-32 rounded-xl object-cover border border-gray-200" />
+                      )}
+                    </div>
+                    
+                    <div><label className="text-xs font-bold text-gray-500 uppercase">Pertanyaan *</label><input type="text" required value={tgForm.question} onChange={e => setTgForm({...tgForm, question: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none" /></div>
+                    <div><label className="text-xs font-bold text-emerald-600 uppercase">Jawaban Benar (Kunci) *</label><input type="text" required value={tgForm.jawaban_benar} onChange={e => setTgForm({...tgForm, jawaban_benar: e.target.value})} className="w-full mt-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm focus:border-emerald-500 focus:outline-none" /></div>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 1 *</label><input type="text" required value={tgForm.pengecoh_1} onChange={e => setTgForm({...tgForm, pengecoh_1: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
+                      <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 2 *</label><input type="text" required value={tgForm.pengecoh_2} onChange={e => setTgForm({...tgForm, pengecoh_2: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
+                      <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 3 *</label><input type="text" required value={tgForm.pengecoh_3} onChange={e => setTgForm({...tgForm, pengecoh_3: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
+                    </div>
+                    
+                    <div><label className="text-xs font-bold text-amber-600 uppercase">Hint (Petunjuk) (Opsional)</label><input type="text" value={tgForm.hint} onChange={e => setTgForm({...tgForm, hint: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
+                    <div><label className="text-xs font-bold text-blue-600 uppercase">Penjelasan (Opsional)</label><textarea value={tgForm.explanation} onChange={e => setTgForm({...tgForm, explanation: e.target.value})} className="w-full mt-1 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm focus:border-blue-500 focus:outline-none h-16" /></div>
+                    <div><label className="text-xs font-bold text-purple-600 uppercase">Fakta Budaya (Opsional)</label><textarea value={tgForm.cultural_fact} onChange={e => setTgForm({...tgForm, cultural_fact: e.target.value})} className="w-full mt-1 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none h-16" /></div>
+                    
+                    <div className="flex gap-3 mt-6">
+                      {editingTgId && <button type="button" onClick={resetFormTg} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200">Batal</button>}
+                      <button type="submit" disabled={submitLoading} className="flex-[2] bg-[#005C43] text-white py-3 rounded-xl font-bold shadow-[0_4px_0_#004733] hover:-translate-y-1 transition-transform">{submitLoading ? 'Menyimpan...' : 'Simpan Soal'}</button>
+                    </div>
+                  </form>
+
+                  <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <h2 className="text-lg font-black text-gray-900 mb-4">Bank Soal Tebak Gambar</h2>
+                    <div className="space-y-3">
+                      {tgList.map(item => (
+                        <div key={item.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50 flex justify-between items-center group">
+                          <div className="flex items-center gap-4">
+                            <img src={item.image_url} alt="Soal" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                            <div><p className="font-bold text-gray-900">{item.question}</p><p className="text-xs text-emerald-600 font-bold mt-1">Kunci: {item.jawaban_benar}</p></div>
+                          </div>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEditTg(item)} className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Edit3 className="w-4 h-4" /></button>
+                            <button onClick={() => handleDelete('soal_tebak_gambar', item.id)} className="p-2 bg-red-100 text-red-600 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {activeGameTab === 'tebak_kata' && (
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6 items-start">
@@ -612,10 +766,10 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 4 & 5 (Sejarah & Pesanan Tetap Seperti Sebelumnya) */}
+          {/* TAB 4 & 5 */}
           {activeMenu === 'sejarah' && (
              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 md:gap-8 items-start">
-             <form onSubmit={handleSubmitSejarah} className="bg-white border border-gray-100 p-5 md:p-6 rounded-[20px] shadow-sm sticky top-0 md:top-[100px] z-10 space-y-4">
+             <form onSubmit={handleSubmitSejarah} className="bg-white border border-gray-100 p-5 md:p-6 rounded-[20px] shadow-sm sticky top-0 md:top-25 z-10 space-y-4">
                 <div className="flex justify-between items-center mb-2 border-b pb-3"><h2 className="text-base md:text-lg font-bold text-gray-900 flex items-center gap-2">{editingSejarahId ? <><Edit3 className="w-4 h-4 md:w-5 md:h-5 text-blue-600" /> Edit Artikel</> : <><Plus className="w-4 h-4 md:w-5 md:h-5 text-[#005C43]" /> Tulis Baru</>}</h2>{editingSejarahId && (<button type="button" onClick={resetFormSejarah} className="text-[10px] md:text-xs font-bold text-gray-400 hover:text-gray-900 flex items-center gap-1 bg-gray-50 px-2.5 py-1.5 rounded-full"><X className="w-3 h-3" /> Batal</button>)}</div>
                <div><label className="block text-[10px] md:text-[11px] font-bold text-gray-500 uppercase mb-1">Kategori Artikel *</label><input type="text" required value={kategoriArtikel} onChange={e => setKategoriArtikel(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 md:p-3 text-xs md:text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" /></div>
                <div><label className="block text-[10px] md:text-[11px] font-bold text-gray-500 uppercase mb-1">Judul Artikel *</label><input type="text" required value={judulArtikel} onChange={e => setJudulArtikel(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 md:p-3 text-xs md:text-sm focus:outline-none focus:border-[#005C43] focus:bg-white" /></div>
@@ -645,7 +799,7 @@ export default function AdminDashboardPage() {
           )}
 
           {activeMenu === 'pesanan' && (
-            <div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 md:p-10 text-center flex flex-col items-center justify-center min-h-[300px]"><div className="w-16 h-16 bg-[#EBF2EF] rounded-full flex items-center justify-center mb-4"><ShoppingBag className="w-8 h-8 text-[#005C43]" /></div><h3 className="text-lg font-bold text-gray-900">Modul Pesanan / Commerce</h3><p className="text-gray-500 mt-2 max-w-md text-sm">Menunggu integrasi API Gateway dengan payment processor untuk mengelola pesanan *merchandise* secara real-time.</p></div>
+            <div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 md:p-10 text-center flex flex-col items-center justify-center min-h-75"><div className="w-16 h-16 bg-[#EBF2EF] rounded-full flex items-center justify-center mb-4"><ShoppingBag className="w-8 h-8 text-[#005C43]" /></div><h3 className="text-lg font-bold text-gray-900">Modul Pesanan / Commerce</h3><p className="text-gray-500 mt-2 max-w-md text-sm">Menunggu integrasi API Gateway dengan payment processor untuk mengelola pesanan *merchandise* secara real-time.</p></div>
           )}
         </div>
       </main>

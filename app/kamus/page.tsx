@@ -117,9 +117,6 @@ const Navbar = () => {
   )
 }
 
-// ==========================================
-// 2. COMPONENT: Footer
-// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8">
     <div className="max-w-7xl mx-auto">
@@ -149,9 +146,6 @@ const Footer = () => (
   </footer>
 )
 
-// ==========================================
-// 3. COMPONENT: VocabularyCard
-// ==========================================
 const VocabularyCard = ({ item, onClick }: { item: VocabularyItem; onClick: () => void }) => {
   const baweanWordsPreview = [item.kata_kasar, item.kata_sedang, item.kata_alos]
     .filter(Boolean)
@@ -170,12 +164,8 @@ const VocabularyCard = ({ item, onClick }: { item: VocabularyItem; onClick: () =
   )
 }
 
-// ==========================================
-// 4. COMPONENT: Detail Pop-up Modal
-// ==========================================
 const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () => void }) => {
-  
-  // Fungsi Pemutar Suara Dinamis (Memprioritaskan Audio DB, Fallback ke Text-to-Speech)
+
   const handleSpeak = (text: string, audioUrl?: string) => {
     if (audioUrl) {
       const audio = new Audio(audioUrl);
@@ -298,9 +288,6 @@ const VocabularyModal = ({ item, onClose }: { item: VocabularyItem; onClose: () 
   );
 };
 
-// ==========================================
-// 5. MAIN PAGE
-// ==========================================
 export default function KamusPage() {
   const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([])
   const [loading, setLoading] = useState(true)
