@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { 
   LogOut, Activity, BookOpen, FileText, ShoppingBag, Users as UsersIcon, Gamepad2,
-  Loader2, UserCircle, Plus, Trash2, Volume2, Edit3, Search, X, Menu,
-  Save
+  Loader2, UserCircle, Plus, Trash2, Edit3, Search, X, Menu,
+  Save, Package, ClipboardList, Check, AlertCircle
 } from 'lucide-react'
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -56,6 +56,29 @@ interface TebakGambarItem {
   pengecoh_3: string; hint: string; explanation: string; cultural_fact: string;
 }
 
+interface ProdukItem {
+  id: string
+  nama: string
+  deskripsi: string | null
+  harga: number
+  stok: number
+  gambar_url: string | null
+  created_at?: string
+}
+
+interface PesananItem {
+  id: string
+  nama_pembeli: string
+  email_pembeli: string
+  telepon: string | null
+  alamat_kirim: string
+  total_harga: number
+  status: 'pending' | 'diproses' | 'dikirim' | 'selesai' | 'dibatalkan'
+  bukti_transfer_url: string | null
+  detail_item: string // JSON string atau deskripsi item yang dibeli
+  created_at: string
+}
+
 // MAIN COMPONENT
 export default function AdminDashboardPage() {
   const router = useRouter()
@@ -71,6 +94,8 @@ export default function AdminDashboardPage() {
   const [tkList, setTkList] = useState<TebakKataItem[]>([])
   const [skList, setSkList] = useState<SusunKataItem[]>([])
   const [tgList, setTgList] = useState<TebakGambarItem[]>([])
+  const [produkList, setProdukList] = useState<ProdukItem[]>([])
+  const [pesananList, setPesananList] = useState<PesananItem[]>([])
   
   // ANALYTICS STATES
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'jam' | 'hari' | 'minggu' | 'bulan'>('hari')
@@ -89,6 +114,7 @@ export default function AdminDashboardPage() {
   const [editingTkId, setEditingTkId] = useState<string | null>(null)
   const [editingSkId, setEditingSkId] = useState<string | null>(null)
   const [editingTgId, setEditingTgId] = useState<string | null>(null)
+  const [editingProdukId, setEditingProdukId] = useState<string | null>(null)
 
   // KAMUS FORM STATES
   const [artiIndo, setArtiIndo] = useState('')
@@ -111,6 +137,10 @@ export default function AdminDashboardPage() {
   const [tgForm, setTgForm] = useState({ image_url: '', question: '', jawaban_benar: '', pengecoh_1: '', pengecoh_2: '', pengecoh_3: '', hint: '', explanation: '', cultural_fact: '' })
   const [tgImageFile, setTgImageFile] = useState<File | null>(null)
 
+  // TOKO / PRODUK FORM STATES
+  const [produkForm, setProdukForm] = useState({ nama: '', deskripsi: '', harga: '', stok: '' })
+  const [produkImageFile, setProdukImageFile] = useState<File | null>(null)
+
   // FETCHERS
   const fetchKamus = async () => {
     const { data } = await supabase.from('kamus').select('*').order('created_at', { ascending: false })
@@ -128,6 +158,14 @@ export default function AdminDashboardPage() {
     if (tk) setTkList(tk as TebakKataItem[]); 
     if (sk) setSkList(sk as SusunKataItem[]);
   }
+  const fetchProduk = async () => {
+    const { data } = await supabase.from('produk').select('*').order('created_at', { ascending: false })
+    if (data) setProdukList(data as ProdukItem[])
+  }
+  const fetchPesanan = async () => {
+    const { data } = await supabase.from('pesanan').select('*').order('created_at', { ascending: false })
+    if (data) setPesananList(data as PesananItem[])
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -136,7 +174,7 @@ export default function AdminDashboardPage() {
         if (error || !session) return router.push('/admin/login')
         setAdminEmail(session.user.email || 'Admin Utama')
 
-        await Promise.all([fetchKamus(), fetchSejarah(), fetchGames()])
+        await Promise.all([fetchKamus(), fetchSejarah(), fetchGames(), fetchProduk(), fetchPesanan()])
         
         const { count: countPengunjung } = await supabase.from('pengunjung').select('*', { count: 'exact', head: true })
         setTotalPengunjung(countPengunjung || 0)
@@ -328,7 +366,6 @@ export default function AdminDashboardPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // PERBAIKAN UTAMA: Tambahan error checking eksplisit dari Supabase
   const handleSubmitTg = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitLoading(true);
@@ -342,8 +379,6 @@ export default function AdminDashboardPage() {
 
       if (!finalImageUrl) throw new Error("Gambar wajib diunggah!");
 
-      // Pastikan struktur payload sama dengan kolom yang ada di database Anda
-      // Gunakan || null agar database tidak error jika kolom kosong tapi required
       const payload = {
         image_url: finalImageUrl,
         question: tgForm.question,
@@ -358,10 +393,10 @@ export default function AdminDashboardPage() {
       
       if (editingTgId) {
         const { error } = await supabase.from('soal_tebak_gambar').update(payload).eq('id', editingTgId);
-        if (error) throw error; // Wajib di-throw agar lari ke Catch block
+        if (error) throw error;
       } else {
         const { error } = await supabase.from('soal_tebak_gambar').insert([payload]);
-        if (error) throw error; // Wajib di-throw agar lari ke Catch block
+        if (error) throw error;
       }
       
       alert('Soal Tebak Gambar Berhasil Disimpan!');
@@ -409,6 +444,81 @@ export default function AdminDashboardPage() {
     } catch (err: any) { alert(`Error Database: ${err.message}`) } finally { setSubmitLoading(false) }
   }
 
+  // ==========================================
+  // HANDLERS: TOKO / PRODUK
+  // ==========================================
+  const resetFormProduk = () => {
+    setEditingProdukId(null)
+    setProdukForm({ nama: '', deskripsi: '', harga: '', stok: '' })
+    setProdukImageFile(null)
+    clearFileInputs()
+  }
+
+  const handleEditProduk = (item: ProdukItem) => {
+    setEditingProdukId(item.id)
+    setProdukForm({
+      nama: item.nama,
+      deskripsi: item.deskripsi || '',
+      harga: String(item.harga),
+      stok: String(item.stok)
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleSubmitProduk = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!produkForm.nama || !produkForm.harga || !produkForm.stok) return alert('Nama, Harga, dan Stok wajib diisi!')
+    setSubmitLoading(true)
+    try {
+      let finalImageUrl = editingProdukId ? produkList.find(p => p.id === editingProdukId)?.gambar_url : null
+      
+      if (produkImageFile) {
+        const uploadedUrl = await uploadFile(produkImageFile, 'produk-images')
+        if (uploadedUrl) finalImageUrl = uploadedUrl
+      }
+
+      const payload = {
+        nama: produkForm.nama,
+        deskripsi: produkForm.deskripsi || null,
+        harga: Number(produkForm.harga),
+        stok: Number(produkForm.stok),
+        gambar_url: finalImageUrl
+      }
+
+      if (editingProdukId) {
+        const { error } = await supabase.from('produk').update(payload).eq('id', editingProdukId)
+        if (error) throw error
+        alert('Produk berhasil diperbarui!')
+      } else {
+        const { error } = await supabase.from('produk').insert([payload])
+        if (error) throw error
+        alert('Produk baru berhasil ditambahkan!')
+      }
+
+      resetFormProduk()
+      fetchProduk()
+    } catch (err: any) {
+      alert(`Gagal menyimpan produk: ${err.message}`)
+    } finally {
+      setSubmitLoading(false)
+    }
+  }
+
+  // ==========================================
+  // HANDLERS: PESANAN
+  // ==========================================
+  const handleUpdateStatusPesanan = async (id: string, newStatus: PesananItem['status']) => {
+    try {
+      const { error } = await supabase.from('pesanan').update({ status: newStatus }).eq('id', id)
+      if (error) throw error
+      alert(`Status pesanan berhasil diubah menjadi ${newStatus}!`)
+      fetchPesanan()
+    } catch (err: any) {
+      alert(`Gagal mengupdate status: ${err.message}`)
+    }
+  }
+
+  // GLOBAL DELETE HANDLER
   const handleDelete = async (table: string, id: string | number) => {
     if (confirm('Yakin ingin menghapus permanen?')) {
       try {
@@ -417,7 +527,10 @@ export default function AdminDashboardPage() {
 
         if (table === 'kamus') fetchKamus()
         else if (table === 'sejarah') fetchSejarah()
+        else if (table === 'produk') fetchProduk()
+        else if (table === 'pesanan') fetchPesanan()
         else fetchGames()
+        alert('Data berhasil dihapus!')
       } catch (err: any) {
         alert(`Gagal menghapus: ${err.message}`);
       }
@@ -459,7 +572,8 @@ export default function AdminDashboardPage() {
               { id: 'kamus', icon: BookOpen, label: 'Kelola Kosakata' },
               { id: 'sejarah', icon: FileText, label: 'Artikel Sejarah' },
               { id: 'games', icon: Gamepad2, label: 'Kelola Soal Game' },
-              { id: 'pesanan', icon: ShoppingBag, label: 'Pesanan Store' },
+              { id: 'toko', icon: Package, label: 'Kelola Toko Store' },
+              { id: 'pesanan', icon: ClipboardList, label: 'Pesanan Masuk' },
             ].map(menu => (
               <button key={menu.id} onClick={() => { setActiveMenu(menu.id); setIsMobileMenuOpen(false) }} 
                 className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === menu.id ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
@@ -479,7 +593,7 @@ export default function AdminDashboardPage() {
       <main className="flex-1 flex flex-col h-[calc(100vh-64px)] md:h-screen overflow-y-auto w-full">
         <header className="bg-white border-b border-gray-100 px-6 md:px-10 py-5 md:py-6 sticky top-0 z-10 hidden md:block">
           <h1 className="text-2xl font-bold text-gray-900 capitalize">
-            {activeMenu === 'dashboard' ? 'Telemetry & Analytics' : activeMenu === 'kamus' ? 'Database Kosakata & Konteks' : activeMenu === 'games' ? 'Manajemen Soal Permainan' : activeMenu === 'sejarah' ? 'Manajemen Konten Sejarah' : 'Modul E-Commerce'}
+            {activeMenu === 'dashboard' ? 'Telemetry & Analytics' : activeMenu === 'kamus' ? 'Database Kosakata & Konteks' : activeMenu === 'games' ? 'Manajemen Soal Permainan' : activeMenu === 'sejarah' ? 'Manajemen Konten Sejarah' : activeMenu === 'toko' ? 'Kelola Katalog Produk' : 'Manajemen Logistik & Transaksi'}
           </h1>
         </header>
 
@@ -503,9 +617,9 @@ export default function AdminDashboardPage() {
              </div>
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                  <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-[#005C43]/10 text-[#005C43] rounded-xl flex items-center justify-center text-xl shrink-0">🎮</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Total Sesi Game</p><h3 className="text-[20px] font-black mt-1">{analyticsGame.totalSesi} Sesi</h3></div></div>
-                 <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl shrink-0">🖼️</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tebak Gambar</p><h3 className="text-[20px] font-black mt-1">{analyticsGame.tebakGambarCount} Kali</h3></div></div>
-                 <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shrink-0">🧩</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tebak Kata</p><h3 className="text-[20px] font-black mt-1">{analyticsGame.tebakKataCount} Kali</h3></div></div>
-                 <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-xl shrink-0">✨</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Susun Kata</p><h3 className="text-[20px] font-black mt-1">{analyticsGame.susunKataCount} Kali</h3></div></div>
+                 <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl shrink-0">📦</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Katalog Produk</p><h3 className="text-[20px] font-black mt-1">{produkList.length} Item</h3></div></div>
+                 <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shrink-0">🛍️</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Total Pesanan</p><h3 className="text-[20px] font-black mt-1">{pesananList.length} Transaksi</h3></div></div>
+                 <div className="bg-white p-5 border border-gray-100 rounded-[20px] shadow-sm flex items-center gap-4"><div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center text-xl shrink-0">⏳</div><div><p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Pesanan Pending</p><h3 className="text-[20px] font-black mt-1">{pesananList.filter(p => p.status === 'pending').length} Order</h3></div></div>
              </div>
              <div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-4 md:p-8">
                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
@@ -538,14 +652,11 @@ export default function AdminDashboardPage() {
                 </div>
                 
                 <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
-                  
-                  {/* GLOBAL ARTI */}
                   <div>
                     <label className="block text-xs font-black text-gray-900 uppercase mb-2">Arti Bahasa Indonesia *</label>
                     <input type="text" required value={artiIndo} onChange={e => setArtiIndo(e.target.value)} placeholder="Contoh: Makan" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white font-bold" />
                   </div>
 
-                  {/* HALUS TIER */}
                   <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100/50 space-y-4">
                     <h3 className="text-xs font-black text-emerald-700 uppercase flex items-center gap-2"><span className="w-2 h-2 bg-emerald-500 rounded-full"></span> Tingkatan Halus (Alos)</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -559,7 +670,6 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
-                  {/* SEDANG TIER */}
                   <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 space-y-4">
                     <h3 className="text-xs font-black text-blue-700 uppercase flex items-center gap-2"><span className="w-2 h-2 bg-blue-500 rounded-full"></span> Tingkatan Sedang</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -573,7 +683,6 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
-                  {/* KASAR TIER */}
                   <div className="bg-red-50/50 p-4 rounded-xl border border-red-100/50 space-y-4">
                     <h3 className="text-xs font-black text-red-700 uppercase flex items-center gap-2"><span className="w-2 h-2 bg-red-500 rounded-full"></span> Tingkatan Kasar</h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -639,7 +748,6 @@ export default function AdminDashboardPage() {
           {/* TAB 3: KELOLA SOAL GAME */}
           {activeMenu === 'games' && (
             <div className="space-y-6">
-              {/* Tab Selector */}
               <div className="flex gap-4 border-b border-gray-200">
                 <button onClick={() => setActiveGameTab('tebak_gambar')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'tebak_gambar' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Tebak Gambar</button>
                 <button onClick={() => setActiveGameTab('tebak_kata')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'tebak_kata' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Tebak Kata</button>
@@ -650,7 +758,6 @@ export default function AdminDashboardPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6 items-start">
                   <form onSubmit={handleSubmitTg} className="bg-white border border-gray-100 p-6 rounded-[24px] shadow-sm space-y-4">
                     <h2 className="text-lg font-black text-gray-900 mb-4">{editingTgId ? 'Edit Soal Tebak Gambar' : 'Tambah Soal Tebak Gambar'}</h2>
-                    
                     <div className="md:col-span-2">
                       <label className="text-xs font-bold text-gray-500 uppercase">Upload Gambar Soal *</label>
                       <input type="file" accept="image/*" onChange={(e) => setTgImageFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-[#EBF2EF] file:text-[#005C43]" />
@@ -658,20 +765,16 @@ export default function AdminDashboardPage() {
                         <img src={tgForm.image_url} alt="Preview" className="mt-2 h-32 rounded-xl object-cover border border-gray-200" />
                       )}
                     </div>
-                    
                     <div><label className="text-xs font-bold text-gray-500 uppercase">Pertanyaan *</label><input type="text" required value={tgForm.question} onChange={e => setTgForm({...tgForm, question: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none" /></div>
                     <div><label className="text-xs font-bold text-emerald-600 uppercase">Jawaban Benar (Kunci) *</label><input type="text" required value={tgForm.jawaban_benar} onChange={e => setTgForm({...tgForm, jawaban_benar: e.target.value})} className="w-full mt-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm focus:border-emerald-500 focus:outline-none" /></div>
-                    
                     <div className="grid grid-cols-3 gap-3">
                       <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 1 *</label><input type="text" required value={tgForm.pengecoh_1} onChange={e => setTgForm({...tgForm, pengecoh_1: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                       <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 2 *</label><input type="text" required value={tgForm.pengecoh_2} onChange={e => setTgForm({...tgForm, pengecoh_2: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                       <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 3 *</label><input type="text" required value={tgForm.pengecoh_3} onChange={e => setTgForm({...tgForm, pengecoh_3: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                     </div>
-                    
                     <div><label className="text-xs font-bold text-amber-600 uppercase">Hint (Petunjuk) (Opsional)</label><input type="text" value={tgForm.hint} onChange={e => setTgForm({...tgForm, hint: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
                     <div><label className="text-xs font-bold text-blue-600 uppercase">Penjelasan (Opsional)</label><textarea value={tgForm.explanation} onChange={e => setTgForm({...tgForm, explanation: e.target.value})} className="w-full mt-1 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm focus:border-blue-500 focus:outline-none h-16" /></div>
                     <div><label className="text-xs font-bold text-purple-600 uppercase">Fakta Budaya (Opsional)</label><textarea value={tgForm.cultural_fact} onChange={e => setTgForm({...tgForm, cultural_fact: e.target.value})} className="w-full mt-1 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none h-16" /></div>
-                    
                     <div className="flex gap-3 mt-6">
                       {editingTgId && <button type="button" onClick={resetFormTg} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200">Batal</button>}
                       <button type="submit" disabled={submitLoading} className="flex-[2] bg-[#005C43] text-white py-3 rounded-xl font-bold shadow-[0_4px_0_#004733] hover:-translate-y-1 transition-transform">{submitLoading ? 'Menyimpan...' : 'Simpan Soal'}</button>
@@ -765,7 +868,7 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 4 & 5 */}
+          {/* TAB 4: SEJARAH */}
           {activeMenu === 'sejarah' && (
              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-6 md:gap-8 items-start">
              <form onSubmit={handleSubmitSejarah} className="bg-white border border-gray-100 p-5 md:p-6 rounded-[20px] shadow-sm sticky top-0 md:top-25 z-10 space-y-4">
@@ -797,8 +900,183 @@ export default function AdminDashboardPage() {
            </div>
           )}
 
+          {/* TAB 5: KELOLA STORE / PRODUK (NEW FEATURE) */}
+          {activeMenu === 'toko' && (
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.3fr] gap-6 items-start">
+              <form onSubmit={handleSubmitProduk} className="bg-white border border-gray-100 p-6 rounded-[24px] shadow-sm space-y-4">
+                <div className="flex justify-between items-center mb-2 border-b pb-4">
+                  <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                    {editingProdukId ? <><Edit3 className="w-5 h-5 text-blue-600" /> Edit Produk Store</> : <><Plus className="w-5 h-5 text-[#005C43]" /> Tambah Produk Baru</>}
+                  </h2>
+                  {editingProdukId && <button type="button" onClick={resetFormProduk} className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1 bg-gray-50 px-3 py-1.5 rounded-full"><X className="w-3 h-3" /> Batal</button>}
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Nama Produk *</label>
+                  <input type="text" required value={produkForm.nama} onChange={e => setProdukForm({...produkForm, nama: e.target.value})} placeholder="Contoh: Kaos Lentera Bawean v1" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Deskripsi Produk</label>
+                  <textarea value={produkForm.deskripsi} onChange={e => setProdukForm({...produkForm, deskripsi: e.target.value})} placeholder="Spesifikasi bahan, ukuran, keunggulan produk..." className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white h-24 resize-none custom-scrollbar" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Harga (Rp) *</label>
+                    <input type="number" required value={produkForm.harga} onChange={e => setProdukForm({...produkForm, harga: e.target.value})} placeholder="125000" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Stok Gudang *</label>
+                    <input type="number" required value={produkForm.stok} onChange={e => setProdukForm({...produkForm, stok: e.target.value})} placeholder="50" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Foto File Produk</label>
+                  <input type="file" accept="image/*" onChange={e => setProdukImageFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-[#EBF2EF] file:text-[#005C43]" />
+                  {editingProdukId && !produkImageFile && produkList.find(p => p.id === editingProdukId)?.gambar_url && (
+                    <img src={produkList.find(p => p.id === editingProdukId)?.gambar_url || ''} alt="Katalog" className="mt-2 h-24 rounded-xl object-cover border" />
+                  )}
+                </div>
+
+                <button type="submit" disabled={submitLoading} className={`w-full mt-4 text-white py-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all ${editingProdukId ? 'bg-blue-600 shadow-[0_4px_0_#1d4ed8]' : 'bg-[#005C43] shadow-[0_4px_0_#004733]'}`}>
+                  {submitLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4" /> {editingProdukId ? 'Simpan Perubahan' : 'Masukkan ke Katalog Store'}</>}
+                </button>
+              </form>
+
+              <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <h2 className="text-lg font-black text-gray-900 mb-4">Katalog Merchandise</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {produkList.map(item => (
+                    <div key={item.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50 flex flex-col justify-between group relative overflow-hidden">
+                      <div className="flex gap-3">
+                        {item.gambar_url ? (
+                          <img src={item.gambar_url} alt={item.nama} className="w-20 h-20 object-cover rounded-xl border shrink-0 bg-white" />
+                        ) : (
+                          <div className="w-20 h-20 rounded-xl bg-gray-200 flex items-center justify-center shrink-0"><Package className="w-8 h-8 text-gray-400" /></div>
+                        )}
+                        <div className="overflow-hidden">
+                          <h4 className="font-bold text-gray-900 text-sm truncate">{item.nama}</h4>
+                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.deskripsi || 'Tidak ada deskripsi.'}</p>
+                          <p className="text-sm font-black text-[#005C43] mt-1">Rp {item.harga.toLocaleString('id-ID')}</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200/60">
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${item.stok > 10 ? 'bg-emerald-100 text-emerald-800' : item.stok > 0 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
+                          Stok: {item.stok} Pcs
+                        </span>
+                        <div className="flex gap-1.5">
+                          <button onClick={() => handleEditProduk(item)} className="p-2 bg-white border text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => handleDelete('produk', item.id)} className="p-2 bg-white border text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {produkList.length === 0 && (
+                    <p className="col-span-2 text-center text-gray-400 text-sm py-8 font-medium">Belum ada produk yang dimasukkan ke katalog.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: MANAJEMEN PESANAN / COMMERCE LOGISTICS (NEW FEATURE) */}
           {activeMenu === 'pesanan' && (
-            <div className="bg-white border border-gray-100 rounded-[20px] shadow-sm p-6 md:p-10 text-center flex flex-col items-center justify-center min-h-75"><div className="w-16 h-16 bg-[#EBF2EF] rounded-full flex items-center justify-center mb-4"><ShoppingBag className="w-8 h-8 text-[#005C43]" /></div><h3 className="text-lg font-bold text-gray-900">Modul Pesanan / Commerce</h3><p className="text-gray-500 mt-2 max-w-md text-sm">Menunggu integrasi API Gateway dengan payment processor untuk mengelola pesanan *merchandise* secara real-time.</p></div>
+            <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 overflow-hidden flex flex-col max-h-[80vh]">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900">Antrean Pesanan Masuk</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Kelola verifikasi pembayaran manual transfer bank dan logistik status pengiriman customer.</p>
+                </div>
+                <div className="flex gap-2 bg-gray-50 p-1 border rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
+                  {['Semua', 'pending', 'diproses', 'dikirim', 'selesai'].map(st => (
+                    <button key={st} className="px-3 py-1.5 text-xs font-bold rounded-lg capitalize shrink-0 text-gray-600 hover:text-gray-900">
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="overflow-y-auto w-full custom-scrollbar flex-1">
+                <div className="space-y-4">
+                  {pesananList.map((order) => (
+                    <div key={order.id} className="p-5 border border-gray-100 rounded-2xl bg-gray-50/50 flex flex-col lg:flex-row justify-between gap-6 hover:border-gray-200 transition-all">
+                      
+                      {/* Left Block: Buyer and Items data */}
+                      <div className="space-y-3 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-black text-gray-400">ID: #{order.id.slice(0,8).toUpperCase()}</span>
+                          <span className="text-[11px] text-gray-400 font-medium">| {order.created_at ? new Date(order.created_at).toLocaleString('id-ID') : ''}</span>
+                          <span className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full ml-2 ${
+                            order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            order.status === 'diproses' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'dikirim' ? 'bg-purple-100 text-purple-800' :
+                            order.status === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-black text-gray-900 text-base">{order.nama_pembeli} <span className="text-xs font-normal text-gray-500">({order.email_pembeli})</span></h4>
+                          <p className="text-xs font-semibold text-gray-600 mt-1">📍 Alamat Kirim: <span className="font-normal text-gray-500">{order.alamat_kirim}</span></p>
+                          {order.telepon && <p className="text-xs font-semibold text-gray-600">📞 Telepon: <span className="font-normal text-gray-500">{order.telepon}</span></p>}
+                        </div>
+
+                        <div className="bg-white p-3 border rounded-xl text-xs space-y-1">
+                          <p className="font-bold text-gray-400 uppercase text-[10px] tracking-wide mb-1">Item yang dibeli:</p>
+                          <p className="font-bold text-gray-800 whitespace-pre-line">{order.detail_item}</p>
+                        </div>
+                      </div>
+
+                      {/* Right Block: Payment Proof & Actions */}
+                      <div className="flex flex-row sm:flex-col justify-between lg:justify-center items-end gap-4 shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-200">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Pembayaran</p>
+                          <p className="text-xl font-black text-[#005C43] mt-0.5">Rp {order.total_harga.toLocaleString('id-ID')}</p>
+                          
+                          {/* Bukti Transfer */}
+                          {order.bukti_transfer_url ? (
+                            <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-[#005C43] hover:underline mt-2 bg-[#EBF2EF] px-2.5 py-1 rounded-lg">
+                              <AlertCircle className="w-3.5 h-3.5" /> Lihat Bukti TF
+                            </a>
+                          ) : (
+                            <span className="inline-block text-[11px] font-bold text-red-500 mt-2 bg-red-50 px-2.5 py-1 rounded-lg">Belum Kirim Bukti</span>
+                          )}
+                        </div>
+
+                        {/* Order Actions */}
+                        <div className="flex items-center gap-2">
+                          {order.status === 'pending' && (
+                            <button onClick={() => handleUpdateStatusPesanan(order.id, 'diproses')} className="flex items-center gap-1 px-3 py-2 bg-[#005C43] text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95">
+                              <Check className="w-3.5 h-3.5" /> Konfirmasi Bayar
+                            </button>
+                          )}
+                          {order.status === 'diproses' && (
+                            <button onClick={() => handleUpdateStatusPesanan(order.id, 'dikirim')} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-blue-700">
+                              🚚 Masukkan Resi / Kirim
+                            </button>
+                          )}
+                          {order.status === 'dikirim' && (
+                            <button onClick={() => handleUpdateStatusPesanan(order.id, 'selesai')} className="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-emerald-700">
+                              <Check className="w-3.5 h-3.5" /> Selesaikan Sesi
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete('pesanan', order.id)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors" title="Batalkan/Hapus">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  ))}
+                  {pesananList.length === 0 && (
+                    <div className="text-center py-12">
+                      <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-400 font-medium text-sm">Belum ada transaksi pembelian masuk saat ini.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </main>
