@@ -95,7 +95,10 @@ export default function AdminDashboardPage() {
   const [skList, setSkList] = useState<SusunKataItem[]>([])
   const [tgList, setTgList] = useState<TebakGambarItem[]>([])
   const [produkList, setProdukList] = useState<ProdukItem[]>([])
+  
+  // LOGISTICS / ORDER STATES
   const [pesananList, setPesananList] = useState<PesananItem[]>([])
+  const [filterPesanan, setFilterPesanan] = useState<string>('Semua') // NEW: State filter pesanan
   
   // ANALYTICS STATES
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'jam' | 'hari' | 'minggu' | 'bulan'>('hari')
@@ -505,13 +508,20 @@ export default function AdminDashboardPage() {
   }
 
   // ==========================================
-  // HANDLERS: PESANAN
+  // HANDLERS: PESANAN (OPTIMIZED)
   // ==========================================
   const handleUpdateStatusPesanan = async (id: string, newStatus: PesananItem['status']) => {
+    const isCancel = newStatus === 'dibatalkan';
+    const confirmMsg = isCancel 
+      ? 'Apakah Anda yakin ingin membatalkan pesanan ini? Aksi ini akan mengubah status menjadi dibatalkan.'
+      : `Apakah Anda yakin ingin mengubah status pesanan ini menjadi ${newStatus.toUpperCase()}?`;
+
+    if (!confirm(confirmMsg)) return;
+
     try {
       const { error } = await supabase.from('pesanan').update({ status: newStatus }).eq('id', id)
       if (error) throw error
-      alert(`Status pesanan berhasil diubah menjadi ${newStatus}!`)
+      alert(isCancel ? 'Pesanan telah dibatalkan.' : `Status pesanan berhasil diubah menjadi ${newStatus}!`)
       fetchPesanan()
     } catch (err: any) {
       alert(`Gagal mengupdate status: ${err.message}`)
@@ -520,7 +530,7 @@ export default function AdminDashboardPage() {
 
   // GLOBAL DELETE HANDLER
   const handleDelete = async (table: string, id: string | number) => {
-    if (confirm('Yakin ingin menghapus permanen?')) {
+    if (confirm('Yakin ingin menghapus data ini secara permanen?')) {
       try {
         const { error } = await supabase.from(table).delete().eq('id', id);
         if (error) throw error;
@@ -900,7 +910,7 @@ export default function AdminDashboardPage() {
            </div>
           )}
 
-          {/* TAB 5: KELOLA STORE / PRODUK (NEW FEATURE) */}
+          {/* TAB 5: KELOLA STORE / PRODUK */}
           {activeMenu === 'toko' && (
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.3fr] gap-6 items-start">
               <form onSubmit={handleSubmitProduk} className="bg-white border border-gray-100 p-6 rounded-[24px] shadow-sm space-y-4">
@@ -978,106 +988,149 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB 6: MANAJEMEN PESANAN / COMMERCE LOGISTICS (NEW FEATURE) */}
-          {activeMenu === 'pesanan' && (
-            <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 overflow-hidden flex flex-col max-h-[80vh]">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
-                <div>
-                  <h2 className="text-xl font-black text-gray-900">Antrean Pesanan Masuk</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Kelola verifikasi pembayaran manual transfer bank dan logistik status pengiriman customer.</p>
-                </div>
-                <div className="flex gap-2 bg-gray-50 p-1 border rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
-                  {['Semua', 'pending', 'diproses', 'dikirim', 'selesai'].map(st => (
-                    <button key={st} className="px-3 py-1.5 text-xs font-bold rounded-lg capitalize shrink-0 text-gray-600 hover:text-gray-900">
-                      {st}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          {/* TAB 6: MANAJEMEN PESANAN / COMMERCE LOGISTICS (MAXIMIZED) */}
+          {activeMenu === 'pesanan' && (() => {
+            const displayedPesanan = filterPesanan === 'Semua' 
+              ? pesananList 
+              : pesananList.filter(p => p.status === filterPesanan);
 
-              <div className="overflow-y-auto w-full custom-scrollbar flex-1">
-                <div className="space-y-4">
-                  {pesananList.map((order) => (
-                    <div key={order.id} className="p-5 border border-gray-100 rounded-2xl bg-gray-50/50 flex flex-col lg:flex-row justify-between gap-6 hover:border-gray-200 transition-all">
-                      
-                      {/* Left Block: Buyer and Items data */}
-                      <div className="space-y-3 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-black text-gray-400">ID: #{order.id.slice(0,8).toUpperCase()}</span>
-                          <span className="text-[11px] text-gray-400 font-medium">| {order.created_at ? new Date(order.created_at).toLocaleString('id-ID') : ''}</span>
-                          <span className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full ml-2 ${
-                            order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            order.status === 'diproses' ? 'bg-blue-100 text-blue-800' :
-                            order.status === 'dikirim' ? 'bg-purple-100 text-purple-800' :
-                            order.status === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </div>
+            return (
+              <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 overflow-hidden flex flex-col max-h-[80vh]">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
+                  <div>
+                    <h2 className="text-xl font-black text-gray-900">Antrean Pesanan Masuk</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">Kelola verifikasi pembayaran manual transfer bank dan logistik status pengiriman customer.</p>
+                  </div>
+                  {/* OPTIMASI 1: FILTER BUTTONS YANG BERFUNGSI */}
+                  <div className="flex gap-2 bg-gray-50 p-1 border rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
+                    {['Semua', 'pending', 'diproses', 'dikirim', 'selesai', 'dibatalkan'].map(st => (
+                      <button 
+                        key={st} 
+                        onClick={() => setFilterPesanan(st)}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize shrink-0 transition-colors ${
+                          filterPesanan === st ? 'bg-[#005C43] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                        }`}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="overflow-y-auto w-full custom-scrollbar flex-1">
+                  <div className="space-y-4">
+                    {displayedPesanan.map((order) => (
+                      <div key={order.id} className={`p-5 border rounded-2xl flex flex-col lg:flex-row justify-between gap-6 hover:shadow-sm transition-all ${order.status === 'dibatalkan' ? 'bg-gray-100/50 border-gray-200 opacity-80' : 'bg-gray-50/50 border-gray-100 hover:border-gray-200'}`}>
                         
-                        <div>
-                          <h4 className="font-black text-gray-900 text-base">{order.nama_pembeli} <span className="text-xs font-normal text-gray-500">({order.email_pembeli})</span></h4>
-                          <p className="text-xs font-semibold text-gray-600 mt-1">📍 Alamat Kirim: <span className="font-normal text-gray-500">{order.alamat_kirim}</span></p>
-                          {order.telepon && <p className="text-xs font-semibold text-gray-600">📞 Telepon: <span className="font-normal text-gray-500">{order.telepon}</span></p>}
-                        </div>
-
-                        <div className="bg-white p-3 border rounded-xl text-xs space-y-1">
-                          <p className="font-bold text-gray-400 uppercase text-[10px] tracking-wide mb-1">Item yang dibeli:</p>
-                          <p className="font-bold text-gray-800 whitespace-pre-line">{order.detail_item}</p>
-                        </div>
-                      </div>
-
-                      {/* Right Block: Payment Proof & Actions */}
-                      <div className="flex flex-row sm:flex-col justify-between lg:justify-center items-end gap-4 shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-200">
-                        <div className="text-left sm:text-right">
-                          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Pembayaran</p>
-                          <p className="text-xl font-black text-[#005C43] mt-0.5">Rp {order.total_harga.toLocaleString('id-ID')}</p>
+                        {/* Left Block: Buyer and Items data */}
+                        <div className="space-y-3 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-black text-gray-400">ID: #{order.id.slice(0,8).toUpperCase()}</span>
+                            <span className="text-[11px] text-gray-400 font-medium">| {order.created_at ? new Date(order.created_at).toLocaleString('id-ID') : ''}</span>
+                            <span className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-full ml-2 ${
+                              order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                              order.status === 'diproses' ? 'bg-blue-100 text-blue-800' :
+                              order.status === 'dikirim' ? 'bg-purple-100 text-purple-800' :
+                              order.status === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 
+                              'bg-gray-200 text-gray-700' // OPTIMASI: Badge Dibatalkan
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
                           
-                          {/* Bukti Transfer */}
-                          {order.bukti_transfer_url ? (
-                            <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-[#005C43] hover:underline mt-2 bg-[#EBF2EF] px-2.5 py-1 rounded-lg">
-                              <AlertCircle className="w-3.5 h-3.5" /> Lihat Bukti TF
-                            </a>
-                          ) : (
-                            <span className="inline-block text-[11px] font-bold text-red-500 mt-2 bg-red-50 px-2.5 py-1 rounded-lg">Belum Kirim Bukti</span>
-                          )}
+                          <div>
+                            <h4 className="font-black text-gray-900 text-base">{order.nama_pembeli} <span className="text-xs font-normal text-gray-500">({order.email_pembeli})</span></h4>
+                            <p className="text-xs font-semibold text-gray-600 mt-1 flex items-center flex-wrap gap-2">
+                              <span>📍 Alamat Kirim: <span className="font-normal text-gray-500">{order.alamat_kirim}</span></span>
+                              {/* OPTIMASI 2: TOMBOL COPY ALAMAT PENGIRIMAN */}
+                              <button 
+                                onClick={() => { navigator.clipboard.writeText(order.alamat_kirim); alert('Alamat berhasil disalin!'); }} 
+                                className="text-[10px] bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold hover:bg-gray-300"
+                              >
+                                📋 Salin
+                              </button>
+                            </p>
+                            {order.telepon && (
+                              <p className="text-xs font-semibold text-gray-600 mt-1 flex items-center gap-2">
+                                📞 Telepon: <span className="font-normal text-gray-500">{order.telepon}</span>
+                                {/* OPTIMASI 3: WHATSAPP SMART LINK */}
+                                <a 
+                                  href={`https://wa.me/${order.telepon.replace(/^0/, '62')}`} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200 inline-flex items-center gap-1"
+                                >
+                                  💬 Hub WA
+                                </a>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="bg-white p-3 border rounded-xl text-xs space-y-1">
+                            <p className="font-bold text-gray-400 uppercase text-[10px] tracking-wide mb-1">Item yang dibeli:</p>
+                            <p className="font-bold text-gray-800 whitespace-pre-line">{order.detail_item}</p>
+                          </div>
                         </div>
 
-                        {/* Order Actions */}
-                        <div className="flex items-center gap-2">
-                          {order.status === 'pending' && (
-                            <button onClick={() => handleUpdateStatusPesanan(order.id, 'diproses')} className="flex items-center gap-1 px-3 py-2 bg-[#005C43] text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95">
-                              <Check className="w-3.5 h-3.5" /> Konfirmasi Bayar
+                        {/* Right Block: Payment Proof & Actions */}
+                        <div className="flex flex-row sm:flex-col justify-between lg:justify-center items-end gap-4 shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-200">
+                          <div className="text-left sm:text-right">
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Pembayaran</p>
+                            <p className="text-xl font-black text-[#005C43] mt-0.5">Rp {order.total_harga.toLocaleString('id-ID')}</p>
+                            
+                            {/* Bukti Transfer */}
+                            {order.bukti_transfer_url ? (
+                              <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-[#005C43] hover:underline mt-2 bg-[#EBF2EF] px-2.5 py-1 rounded-lg">
+                                <AlertCircle className="w-3.5 h-3.5" /> Lihat Bukti TF
+                              </a>
+                            ) : (
+                              <span className="inline-block text-[11px] font-bold text-red-500 mt-2 bg-red-50 px-2.5 py-1 rounded-lg">Belum Kirim Bukti</span>
+                            )}
+                          </div>
+
+                          {/* Order Actions */}
+                          <div className="flex items-center gap-2">
+                            {order.status === 'pending' && (
+                              <>
+                                <button onClick={() => handleUpdateStatusPesanan(order.id, 'diproses')} className="flex items-center gap-1 px-3 py-2 bg-[#005C43] text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95">
+                                  <Check className="w-3.5 h-3.5" /> Konfirmasi Bayar
+                                </button>
+                                {/* OPTIMASI 4: TOMBOL PEMBATALAN */}
+                                <button onClick={() => handleUpdateStatusPesanan(order.id, 'dibatalkan')} className="flex items-center gap-1 px-3 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300">
+                                  Batalkan
+                                </button>
+                              </>
+                            )}
+                            {order.status === 'diproses' && (
+                              <button onClick={() => handleUpdateStatusPesanan(order.id, 'dikirim')} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-blue-700">
+                                🚚 Masukkan Resi / Kirim
+                              </button>
+                            )}
+                            {order.status === 'dikirim' && (
+                              <button onClick={() => handleUpdateStatusPesanan(order.id, 'selesai')} className="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-emerald-700">
+                                <Check className="w-3.5 h-3.5" /> Selesaikan Sesi
+                              </button>
+                            )}
+                            {/* Opsi hapus permanen tetap ada untuk log sampah */}
+                            <button onClick={() => handleDelete('pesanan', order.id)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors" title="Hapus Permanen Dari Database">
+                              <Trash2 className="w-4 h-4" />
                             </button>
-                          )}
-                          {order.status === 'diproses' && (
-                            <button onClick={() => handleUpdateStatusPesanan(order.id, 'dikirim')} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-blue-700">
-                              🚚 Masukkan Resi / Kirim
-                            </button>
-                          )}
-                          {order.status === 'dikirim' && (
-                            <button onClick={() => handleUpdateStatusPesanan(order.id, 'selesai')} className="flex items-center gap-1 px-3 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-sm hover:bg-emerald-700">
-                              <Check className="w-3.5 h-3.5" /> Selesaikan Sesi
-                            </button>
-                          )}
-                          <button onClick={() => handleDelete('pesanan', order.id)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors" title="Batalkan/Hapus">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          </div>
                         </div>
+
                       </div>
-
-                    </div>
-                  ))}
-                  {pesananList.length === 0 && (
-                    <div className="text-center py-12">
-                      <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-400 font-medium text-sm">Belum ada transaksi pembelian masuk saat ini.</p>
-                    </div>
-                  )}
+                    ))}
+                    {displayedPesanan.length === 0 && (
+                      <div className="text-center py-12">
+                        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-400 font-medium text-sm">Tidak ada transaksi yang ditemukan untuk filter ini.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </main>
     </div>

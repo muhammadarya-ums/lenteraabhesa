@@ -103,7 +103,6 @@ const HeroSection = () => (
 // ==========================================
 // 3. COMPONENT: Products Grid & Checkout
 // ==========================================
-// Updated interface to match 'produk' table
 interface Product {
   id: string
   nama: string
@@ -120,16 +119,22 @@ const ProductsSection = () => {
   // Checkout Modal States
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [formData, setFormData] = useState({ name: '', wa: '', address: '' })
+  
+  // State form sudah mencakup varian dan jumlah
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    wa: '', 
+    address: '',
+    jumlah: 1,
+    varian: '' 
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Nomor WA Admin (Ganti dengan nomor WA Anda yang aktif)
-  const ADMIN_WA_NUMBER = "6281234567890" 
+  const ADMIN_WA_NUMBER = "6282335859946" 
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Changed from 'merchandise' to 'produk'
         const { data, error } = await supabase.from('produk').select('*').order('created_at', { ascending: false })
         if (error) throw error
         setProducts(data || [])
@@ -153,32 +158,38 @@ const ProductsSection = () => {
     setIsSubmitting(true)
 
     try {
-      // Updated payload to match your 'pesanan' table schema
+      const totalHarga = selectedProduct.harga * formData.jumlah
+
+      // Payload lengkap untuk database
       const payload = {
         produk_id: selectedProduct.id,
         nama_pembeli: formData.name,
-        kontak_pembeli: formData.wa, // Mapping to kontak_pembeli
-        jumlah: 1, // Defaulting to 1 for now, can be made dynamic later
-        total_harga: selectedProduct.harga, // Assuming 1 quantity
+        kontak_pembeli: formData.wa,
+        alamat_kirim: formData.address, // Disimpan ke DB
+        jumlah: formData.jumlah,
+        varian: formData.varian || null,
+        total_harga: totalHarga,
         status: 'pending',
-        // Assuming your table doesn't have an explicit 'alamat_kirim' column based on the ERD, 
-        // but if it does (like in the admin code), you might need to append it to the WA message 
-        // or add it to the database if the column exists. 
-        // I will include it in the WA message for sure.
       }
 
-      // If your actual table has an address field, uncomment the line below and adjust the key name
-      // (payload as any).alamat_kirim = formData.address;
+      // Insert dan minta data kembalian untuk mendapatkan ID
+      const { data, error } = await supabase
+        .from('pesanan')
+        .insert([payload])
+        .select()
+        .single()
 
-      const { error } = await supabase.from('pesanan').insert([payload])
       if (error) throw error
 
-      // Redirect ke WhatsApp Admin
-      const waMessage = `Halo Admin Lentera Abhesa, saya ingin memesan merchandise:\n\n*Produk:* ${selectedProduct.nama}\n*Harga:* Rp ${selectedProduct.harga.toLocaleString('id-ID')}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nNo. WA: ${formData.wa}\nAlamat Lengkap: ${formData.address}\n\nMohon informasi ongkos kirim dan instruksi pembayarannya. Terima kasih.`
+      const orderId = data.id // Tracking ID
+
+      // Redirect ke WhatsApp Admin dengan format pesan yang rapi dan profesional
+      const waMessage = `Halo Admin Lentera Abhesa, saya ingin memproses pesanan baru.\n\n*ORDER ID: ${orderId}*\n_(Simpan Order ID ini untuk mengecek status pesanan)_\n\n*Detail Pesanan:*\n- Produk: ${selectedProduct.nama}\n- Varian: ${formData.varian || '-'}\n- Jumlah: ${formData.jumlah} pcs\n- Total Harga: Rp ${totalHarga.toLocaleString('id-ID')}\n\n*Data Pengiriman:*\n- Nama: ${formData.name}\n- No. WA: ${formData.wa}\n- Alamat Lengkap: ${formData.address}\n\nMohon informasi total biaya (termasuk ongkir) dan instruksi pembayarannya. Saya akan mengirimkan bukti transfer di chat ini. Terima kasih.`
+      
       const waUrl = `https://wa.me/${ADMIN_WA_NUMBER}?text=${encodeURIComponent(waMessage)}`
       
       setIsModalOpen(false)
-      setFormData({ name: '', wa: '', address: '' })
+      setFormData({ name: '', wa: '', address: '', jumlah: 1, varian: '' }) // Reset state form
       window.open(waUrl, '_blank')
 
     } catch (err: any) {
@@ -268,8 +279,8 @@ const ProductsSection = () => {
 
         {/* Modal Checkout */}
         {isModalOpen && selectedProduct && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-            <div className="bg-white rounded-[32px] w-full max-w-lg p-8 relative animate-in zoom-in-95 duration-200 shadow-2xl">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white rounded-[32px] w-full max-w-lg p-8 relative animate-in zoom-in-95 duration-200 shadow-2xl my-8">
               <button 
                 onClick={() => setIsModalOpen(false)} 
                 className="absolute right-6 top-6 p-2 bg-gray-50 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -283,7 +294,7 @@ const ProductsSection = () => {
                 </div>
                 <h2 className="text-2xl font-black text-gray-900 mb-2">Form Pengiriman</h2>
                 <p className="text-sm text-gray-500 leading-relaxed">
-                  Lengkapi data untuk pesanan <span className="font-bold text-[#005C43]">"{selectedProduct.nama}"</span> seharga <span className="font-bold text-gray-700">Rp {selectedProduct.harga.toLocaleString('id-ID')}</span>.
+                  Lengkapi data untuk pesanan <span className="font-bold text-[#005C43]">"{selectedProduct.nama}"</span>.
                 </p>
               </div>
 
@@ -299,6 +310,7 @@ const ProductsSection = () => {
                     placeholder="Masukkan nama Anda" 
                   />
                 </div>
+                
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">No. WhatsApp Aktif *</label>
                   <input 
@@ -310,6 +322,7 @@ const ProductsSection = () => {
                     placeholder="0812xxxxxx" 
                   />
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Alamat Pengiriman *</label>
                   <textarea 
@@ -320,8 +333,40 @@ const ProductsSection = () => {
                     placeholder="Jalan, RT/RW, Desa, Kecamatan, Kota, Kode Pos" 
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Varian / Ukuran</label>
+                    <input 
+                      type="text" 
+                      value={formData.varian} 
+                      onChange={e => setFormData({...formData, varian: e.target.value})} 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold text-gray-900 focus:border-[#005C43] focus:ring-1 focus:ring-[#005C43] outline-none transition-all" 
+                      placeholder="Misal: L, M, Biru" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Jumlah *</label>
+                    <input 
+                      required 
+                      type="number" 
+                      min="1"
+                      max={selectedProduct.stok}
+                      value={formData.jumlah} 
+                      onChange={e => setFormData({...formData, jumlah: parseInt(e.target.value) || 1})} 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold text-gray-900 focus:border-[#005C43] focus:ring-1 focus:ring-[#005C43] outline-none transition-all" 
+                    />
+                  </div>
+                </div>
+
+                <div className="py-3 flex justify-between items-center border-t border-gray-100 mt-4">
+                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total Harga:</span>
+                  <span className="text-xl font-black text-[#005C43]">
+                    Rp {(selectedProduct.harga * formData.jumlah).toLocaleString('id-ID')}
+                  </span>
+                </div>
                 
-                <div className="pt-4">
+                <div className="pt-2">
                   <button 
                     type="submit" 
                     disabled={isSubmitting} 
