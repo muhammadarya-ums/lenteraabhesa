@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { 
   LogOut, Activity, BookOpen, FileText, ShoppingBag, Users as UsersIcon, Gamepad2,
   Loader2, UserCircle, Plus, Trash2, Edit3, Search, X, Menu,
-  Save, Package, ClipboardList, Check, AlertCircle
+  Save, Package, ClipboardList, Check, AlertCircle, UploadCloud
 } from 'lucide-react'
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -98,7 +98,8 @@ export default function AdminDashboardPage() {
   
   // LOGISTICS / ORDER STATES
   const [pesananList, setPesananList] = useState<PesananItem[]>([])
-  const [filterPesanan, setFilterPesanan] = useState<string>('Semua') // NEW: State filter pesanan
+  const [filterPesanan, setFilterPesanan] = useState<string>('Semua')
+  const [uploadingBuktiId, setUploadingBuktiId] = useState<string | null>(null) // NEW: State loading untuk upload bukti admin
   
   // ANALYTICS STATES
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'jam' | 'hari' | 'minggu' | 'bulan'>('hari')
@@ -525,6 +526,25 @@ export default function AdminDashboardPage() {
       fetchPesanan()
     } catch (err: any) {
       alert(`Gagal mengupdate status: ${err.message}`)
+    }
+  }
+
+  // UPLOAD BUKTI TRANSFER OLEH ADMIN
+  const handleUploadBuktiAdmin = async (orderId: string, file: File) => {
+    setUploadingBuktiId(orderId)
+    try {
+      const buktiUrl = await uploadFile(file, 'bukti-transfer')
+      if (!buktiUrl) throw new Error("Gagal memproses file gambar.")
+
+      const { error } = await supabase.from('pesanan').update({ bukti_transfer_url: buktiUrl }).eq('id', orderId)
+      if (error) throw error
+      
+      alert('File Bukti Pembayaran berhasil diunggah & disimpan!')
+      fetchPesanan() // Muat ulang data pesanan
+    } catch (err: any) {
+      alert(`Terjadi kesalahan saat unggah: ${err.message}`)
+    } finally {
+      setUploadingBuktiId(null)
     }
   }
 
@@ -1001,7 +1021,6 @@ export default function AdminDashboardPage() {
                     <h2 className="text-xl font-black text-gray-900">Antrean Pesanan Masuk</h2>
                     <p className="text-xs text-gray-500 mt-0.5">Kelola verifikasi pembayaran manual transfer bank dan logistik status pengiriman customer.</p>
                   </div>
-                  {/* OPTIMASI 1: FILTER BUTTONS YANG BERFUNGSI */}
                   <div className="flex gap-2 bg-gray-50 p-1 border rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                     {['Semua', 'pending', 'diproses', 'dikirim', 'selesai', 'dibatalkan'].map(st => (
                       <button 
@@ -1032,7 +1051,7 @@ export default function AdminDashboardPage() {
                               order.status === 'diproses' ? 'bg-blue-100 text-blue-800' :
                               order.status === 'dikirim' ? 'bg-purple-100 text-purple-800' :
                               order.status === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 
-                              'bg-gray-200 text-gray-700' // OPTIMASI: Badge Dibatalkan
+                              'bg-gray-200 text-gray-700'
                             }`}>
                               {order.status}
                             </span>
@@ -1042,7 +1061,6 @@ export default function AdminDashboardPage() {
                             <h4 className="font-black text-gray-900 text-base">{order.nama_pembeli} <span className="text-xs font-normal text-gray-500">({order.email_pembeli})</span></h4>
                             <p className="text-xs font-semibold text-gray-600 mt-1 flex items-center flex-wrap gap-2">
                               <span>📍 Alamat Kirim: <span className="font-normal text-gray-500">{order.alamat_kirim}</span></span>
-                              {/* OPTIMASI 2: TOMBOL COPY ALAMAT PENGIRIMAN */}
                               <button 
                                 onClick={() => { navigator.clipboard.writeText(order.alamat_kirim); alert('Alamat berhasil disalin!'); }} 
                                 className="text-[10px] bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold hover:bg-gray-300"
@@ -1053,7 +1071,6 @@ export default function AdminDashboardPage() {
                             {order.telepon && (
                               <p className="text-xs font-semibold text-gray-600 mt-1 flex items-center gap-2">
                                 📞 Telepon: <span className="font-normal text-gray-500">{order.telepon}</span>
-                                {/* OPTIMASI 3: WHATSAPP SMART LINK */}
                                 <a 
                                   href={`https://wa.me/${order.telepon.replace(/^0/, '62')}`} 
                                   target="_blank" 
@@ -1078,14 +1095,37 @@ export default function AdminDashboardPage() {
                             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Pembayaran</p>
                             <p className="text-xl font-black text-[#005C43] mt-0.5">Rp {order.total_harga.toLocaleString('id-ID')}</p>
                             
-                            {/* Bukti Transfer */}
-                            {order.bukti_transfer_url ? (
-                              <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-[#005C43] hover:underline mt-2 bg-[#EBF2EF] px-2.5 py-1 rounded-lg">
-                                <AlertCircle className="w-3.5 h-3.5" /> Lihat Bukti TF
-                              </a>
-                            ) : (
-                              <span className="inline-block text-[11px] font-bold text-red-500 mt-2 bg-red-50 px-2.5 py-1 rounded-lg">Belum Kirim Bukti</span>
-                            )}
+                            {/* Area Upload & Tampil Bukti Transfer (NEW) */}
+                            <div className="flex flex-col items-start sm:items-end gap-2 mt-2">
+                              {order.bukti_transfer_url ? (
+                                <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-[#005C43] hover:underline bg-[#EBF2EF] px-2.5 py-1 rounded-lg">
+                                  <AlertCircle className="w-3.5 h-3.5" /> Lihat Bukti TF
+                                </a>
+                              ) : order.status === 'diproses' || order.status === 'dikirim' || order.status === 'selesai' ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">
+                                  <Check className="w-3.5 h-3.5" /> Terverifikasi Manual (WA)
+                                </span>
+                              ) : (
+                                <span className="inline-block text-[11px] font-bold text-red-500 bg-red-50 px-2.5 py-1 rounded-lg">Belum Kirim Bukti</span>
+                              )}
+
+                              {/* Tombol Upload Bukti WA oleh Admin */}
+                              <label className={`cursor-pointer inline-flex items-center justify-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors w-full sm:w-auto ${uploadingBuktiId === order.id ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'}`}>
+                                {uploadingBuktiId === order.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <UploadCloud className="w-3 h-3" />}
+                                {uploadingBuktiId === order.id ? 'Mengunggah...' : (order.bukti_transfer_url ? 'Ganti Bukti (WA)' : 'Upload Bukti WA')}
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                  onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                      handleUploadBuktiAdmin(order.id, e.target.files[0]);
+                                    }
+                                  }}
+                                  disabled={uploadingBuktiId === order.id}
+                                />
+                              </label>
+                            </div>
                           </div>
 
                           {/* Order Actions */}
@@ -1095,7 +1135,6 @@ export default function AdminDashboardPage() {
                                 <button onClick={() => handleUpdateStatusPesanan(order.id, 'diproses')} className="flex items-center gap-1 px-3 py-2 bg-[#005C43] text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-95">
                                   <Check className="w-3.5 h-3.5" /> Konfirmasi Bayar
                                 </button>
-                                {/* OPTIMASI 4: TOMBOL PEMBATALAN */}
                                 <button onClick={() => handleUpdateStatusPesanan(order.id, 'dibatalkan')} className="flex items-center gap-1 px-3 py-2 bg-gray-200 text-gray-700 font-bold text-xs rounded-xl hover:bg-gray-300">
                                   Batalkan
                                 </button>
@@ -1111,7 +1150,6 @@ export default function AdminDashboardPage() {
                                 <Check className="w-3.5 h-3.5" /> Selesaikan Sesi
                               </button>
                             )}
-                            {/* Opsi hapus permanen tetap ada untuk log sampah */}
                             <button onClick={() => handleDelete('pesanan', order.id)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition-colors" title="Hapus Permanen Dari Database">
                               <Trash2 className="w-4 h-4" />
                             </button>
