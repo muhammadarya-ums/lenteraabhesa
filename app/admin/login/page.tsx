@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Lock, Mail, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react'
-import Image from 'next/image'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -15,7 +14,7 @@ export default function AdminLoginPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // KEAMANAN LAPI 1: Cek apakah sudah ada sesi login yang aktif saat halaman dimuat
+  // KEAMANAN LAPIS 1: Cek apakah sudah ada sesi login yang aktif saat halaman dimuat
   useEffect(() => {
     const checkActiveSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -41,17 +40,35 @@ export default function AdminLoginPage() {
     setErrorMsg('')
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // 1. Proses Sign In ke Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw new Error('Kredensial tidak valid. Periksa email dan password Anda.')
+      if (authError) throw new Error('Kredensial tidak valid. Periksa email dan password Anda.')
 
-      // Login sukses, bersihkan form dan arahkan ke dashboard
-      setEmail('')
-      setPassword('')
-      router.replace('/admin')
+      const user = authData.user
+
+      if (user) {
+        // 2. KEAMANAN LAPIS 2: Cek apakah UUID terdaftar di tabel profil_admin
+        const { data: profile, error: profileError } = await supabase
+          .from('profil_admin')
+          .select('role, nama')
+          .eq('id', user.id)
+          .single()
+
+        // Jika tidak terdaftar di tabel profil_admin, langsung force sign out!
+        if (profileError || !profile) {
+          await supabase.auth.signOut()
+          throw new Error('Akses ditolak. Akun Anda tidak terdaftar sebagai Staff Admin/Teknisi.')
+        }
+
+        // 3. Login sukses dan terverifikasi, bersihkan form dan arahkan ke dashboard
+        setEmail('')
+        setPassword('')
+        router.replace('/admin')
+      }
       
     } catch (error: any) {
       setErrorMsg(error.message)

@@ -103,20 +103,7 @@ interface ProfilAdmin {
 }
 
 export default function AdminDashboardPage() {
-    const router = useRouter();
-    const handleLogout = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) throw error;
-
-    router.replace("/admin/login");
-    router.refresh();
-  } catch (err) {
-    console.error("Logout gagal:", err);
-    alert("Logout gagal.");
-  }
-};
+    const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [adminProfile, setAdminProfile] = useState<ProfilAdmin | null>(null)
@@ -763,10 +750,9 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
               ))}
             </nav>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold text-[14px] rounded-xl mt-6">
-            <LogOut className="w-4 h-4" />Keluar Sistem</button>
+          <button onClick={() => supabase.auth.signOut()} className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 font-bold text-[14px] rounded-xl mt-6">
+            <LogOut className="w-4 h-4" /> Keluar Sistem
+          </button>
         </aside>
         {isMobileMenuOpen && <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setIsMobileMenuOpen(false)}/>}
 
