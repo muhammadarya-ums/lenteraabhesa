@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { BookOpen, History, Gamepad2 } from 'lucide-react'
+import { BookOpen, History, Gamepad2, ChevronDown } from 'lucide-react'
 import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -143,45 +143,186 @@ const HeroSection = ({
 )
 
 // 3. COMPONENT: Features Section
-const FeaturesSection = () => (
-  <section className="w-full px-8 py-16 bg-white">
-    <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/book.png" alt="Kamus Digital" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Kamus Digital</h3>
-          <p className="text-sm text-gray-700">Cari dan pelajari kosakata bawean</p>
+const FeaturesSection = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  const toggleAccordion = (index: number) => {
+    setOpenIndex(openIndex === index ? null : index)
+  }
+
+  const features = [
+    {
+      title: "Kamus Digital",
+      icon: "/book.png",
+      shortDesc: "Cari dan pelajari kosakata bawean",
+      details: [
+        "Pencarian kosakata yang cepat, presisi, dan mudah digunakan.",
+        "Menyediakan panduan pelafalan dan contoh penggunaan dalam kalimat sehari-hari.",
+        "Terus diperbarui secara berkala dengan kosakata dari penutur asli."
+      ]
+    },
+    {
+      title: "Sejarah",
+      icon: "/archive-book.png",
+      shortDesc: "Telusuri asal-usul dan ragam halus abhesa",
+      details: [
+        "Eksplorasi artikel mendalam tentang sejarah Pulau Bawean.",
+        "Dokumentasi tradisi lisan, adat istiadat, dan budaya lokal yang komprehensif.",
+        "Akses ke arsip digital terkait asal-usul perkembangan ragam halus Abhesa."
+      ]
+    },
+    {
+      title: "Belajar Bahasa",
+      icon: "/teacher.png",
+      shortDesc: "Belajar seru dan interaktif bahasa halus",
+      details: [
+        "Modul pembelajaran yang dirancang bertahap dari level dasar hingga mahir.",
+        "Materi tata bahasa dan pembentukan kalimat yang interaktif.",
+        "Tips dan trik berkomunikasi langsung menggunakan ragam halus Bawean."
+      ]
+    },
+    {
+      title: "Game",
+      icon: "/game1.png",
+      shortDesc: "Selesaikan semua tantangan seru",
+      details: [
+        "Mini-games edukatif untuk menguji ingatan kosakata dengan cara yang tidak membosankan.",
+        "Dapatkan skor tertinggi dan pecahkan rekor di papan peringkat.",
+        "Tantangan harian yang dirancang untuk mempercepat pemahaman bahasa."
+      ]
+    }
+  ]
+
+  return (
+    <section className="w-full px-8 py-16 bg-white">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* ================= 1. DESKTOP VIEW (Berjejer Kesamping + Klik untuk Turun/Expand) ================= */}
+        <div className="hidden md:grid grid-cols-4 gap-6 items-start">
+          {features.map((feature, index) => {
+            const isOpen = openIndex === index
+
+            return (
+              <div
+                key={index}
+                onClick={() => toggleAccordion(index)}
+                className={`flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] cursor-pointer transition-all duration-300 select-none ${
+                  isOpen ? 'ring-2 ring-[#005C43]/30 shadow-md' : 'hover:-translate-y-1'
+                }`}
+              >
+                {/* Icon */}
+                <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4 shadow-sm shrink-0">
+                  <Image 
+                    src={feature.icon} 
+                    alt={feature.title} 
+                    width={32} 
+                    height={32} 
+                    className="object-contain" 
+                  />
+                </div>
+                
+                {/* Title & Short Desc */}
+                <h3 className="text-xl font-bold text-[#005C43] mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-700">{feature.shortDesc}</p>
+                
+                {/* Indicator Panah Kecil untuk Desktop */}
+                <ChevronDown 
+                  className={`text-[#005C43]/70 mt-3 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#005C43]' : ''}`} 
+                  size={20} 
+                />
+
+                {/* Dropdown Animasi Konten Detail (CSS Grid Trick) */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out text-left w-full ${
+                    isOpen ? "grid-rows-[1fr] opacity-100 mt-5 pt-4 border-t border-[#005C43]/15" : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <ul className="space-y-2.5">
+                      {feature.details.map((detail, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-gray-700 text-xs leading-relaxed">
+                          <span className="text-[#005C43] font-bold mt-0.5 shrink-0">•</span>
+                          <span>{detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/archive-book.png" alt="Sejarah" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Sejarah</h3>
-          <p className="text-sm text-gray-700">Telusuri asal-usul dan ragam halus abhesa</p>
+        {/*2. MOBILE VIEW (Susunan Atas-Bawah / Accordion Video)*/}
+        <div className="flex md:hidden flex-col gap-4 max-w-md mx-auto">
+          {features.map((feature, index) => {
+            const isOpen = openIndex === index
+
+            return (
+              <div
+                key={index}
+                className="border border-[#005C43]/20 rounded-3xl overflow-hidden transition-all duration-300 bg-[#E5ECE8]"
+              >
+                {/* Accordion Header / Trigger */}
+                <button
+                  onClick={() => toggleAccordion(index)}
+                  className="w-full px-5 py-4 flex items-center justify-between bg-transparent focus:outline-none"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                      <Image
+                        src={feature.icon}
+                        alt={feature.title}
+                        width={24}
+                        height={24}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-bold text-[#005C43]">{feature.title}</h3>
+                      <p className="text-xs text-gray-700 mt-0.5">{feature.shortDesc}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Rotating Chevron Icon */}
+                  <ChevronDown
+                    className={`text-[#005C43] transition-transform duration-300 shrink-0 ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                    size={24}
+                  />
+                </button>
+
+                {/* Accordion Content (Smooth Height Transition) */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="px-5 pb-5 pt-1">
+                      <div className="border-t border-[#005C43]/15 pt-3 ml-[64px]">
+                        <ul className="space-y-2">
+                          {feature.details.map((detail, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-gray-700 text-xs leading-relaxed">
+                              <span className="text-[#005C43] font-bold mt-0.5">•</span>
+                              {detail}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/teacher.png" alt="Belajar Bahasa" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Belajar Bahasa</h3>
-          <p className="text-sm text-gray-700">Belajar seru dan interaktif bahasa halus</p>
-        </div>
-
-        <div className="flex flex-col items-center text-center p-8 rounded-3xl bg-[#E5ECE8] hover:-translate-y-1 transition-transform">
-          <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4">
-            <Image src="/game1.png" alt="Game" width={32} height={32} className="object-contain" />
-          </div>
-          <h3 className="text-xl font-bold text-[#005C43] mb-2">Game</h3>
-          <p className="text-sm text-gray-700">Selesaikan semua tantangan seru</p>
-        </div>
       </div>
-    </div>
-  </section>
-)
+    </section>
+  )
+}
 
 // 4. COMPONENT: Why Section
 const WhySection = () => (
