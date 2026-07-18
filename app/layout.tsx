@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import FeedbackWidget from '@/components/FeedbackWidget'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({
@@ -50,6 +51,10 @@ export default function RootLayout({
     <html lang="id" className={`${geistSans.variable} ${geistMono.variable} bg-white`}>
       <body className="font-sans antialiased">
         {children}
+        
+        {/* <-- Panggil widget-nya di sini, tepat di bawah children --> */}
+        <FeedbackWidget /> 
+        
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

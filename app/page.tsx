@@ -6,6 +6,9 @@ import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import FloatingKomentar from '@/components/FloatingKomentar'
+import FeedbackWidget from '@/components/FeedbackWidget'
+import TestimoniSection from '@/components/TestimoniSection'
 
 // 1. COMPONENT: Navbar
 const Navbar = () => {
@@ -197,7 +200,7 @@ const FeaturesSection = () => {
     <section className="w-full px-8 py-16 bg-white">
       <div className="max-w-7xl mx-auto">
         
-        {/* ================= 1. DESKTOP VIEW (Berjejer Kesamping + Klik untuk Turun/Expand) ================= */}
+        {/* ================= 1. DESKTOP VIEW ================= */}
         <div className="hidden md:grid grid-cols-4 gap-6 items-start">
           {features.map((feature, index) => {
             const isOpen = openIndex === index
@@ -210,7 +213,6 @@ const FeaturesSection = () => {
                   isOpen ? 'ring-2 ring-[#005C43]/30 shadow-md' : 'hover:-translate-y-1'
                 }`}
               >
-                {/* Icon */}
                 <div className="w-16 h-16 rounded-full bg-[#FFFFFF] flex items-center justify-center mb-4 shadow-sm shrink-0">
                   <Image 
                     src={feature.icon} 
@@ -221,17 +223,14 @@ const FeaturesSection = () => {
                   />
                 </div>
                 
-                {/* Title & Short Desc */}
                 <h3 className="text-xl font-bold text-[#005C43] mb-2">{feature.title}</h3>
                 <p className="text-sm text-gray-700">{feature.shortDesc}</p>
                 
-                {/* Indicator Panah Kecil untuk Desktop */}
                 <ChevronDown 
                   className={`text-[#005C43]/70 mt-3 transition-transform duration-300 ${isOpen ? 'rotate-180 text-[#005C43]' : ''}`} 
                   size={20} 
                 />
 
-                {/* Dropdown Animasi Konten Detail (CSS Grid Trick) */}
                 <div
                   className={`grid transition-all duration-300 ease-in-out text-left w-full ${
                     isOpen ? "grid-rows-[1fr] opacity-100 mt-5 pt-4 border-t border-[#005C43]/15" : "grid-rows-[0fr] opacity-0"
@@ -253,7 +252,7 @@ const FeaturesSection = () => {
           })}
         </div>
 
-        {/*2. MOBILE VIEW (Susunan Atas-Bawah / Accordion Video)*/}
+        {/*2. MOBILE VIEW */}
         <div className="flex md:hidden flex-col gap-4 max-w-md mx-auto">
           {features.map((feature, index) => {
             const isOpen = openIndex === index
@@ -263,7 +262,6 @@ const FeaturesSection = () => {
                 key={index}
                 className="border border-[#005C43]/20 rounded-3xl overflow-hidden transition-all duration-300 bg-[#E5ECE8]"
               >
-                {/* Accordion Header / Trigger */}
                 <button
                   onClick={() => toggleAccordion(index)}
                   className="w-full px-5 py-4 flex items-center justify-between bg-transparent focus:outline-none"
@@ -284,7 +282,6 @@ const FeaturesSection = () => {
                     </div>
                   </div>
                   
-                  {/* Rotating Chevron Icon */}
                   <ChevronDown
                     className={`text-[#005C43] transition-transform duration-300 shrink-0 ${
                       isOpen ? "rotate-180" : ""
@@ -293,7 +290,6 @@ const FeaturesSection = () => {
                   />
                 </button>
 
-                {/* Accordion Content (Smooth Height Transition) */}
                 <div
                   className={`grid transition-all duration-300 ease-in-out ${
                     isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
@@ -457,6 +453,9 @@ export default function Page() {
   const [totalKamus, setTotalKamus] = useState<number | string>('...')
   const [totalSejarah, setTotalSejarah] = useState<number | string>('...')
   const [totalPengunjung, setTotalPengunjung] = useState<number | string>('...')
+  
+  // State baru untuk menampung data feedback
+  const [feedbacks, setFeedbacks] = useState<any[]>([])
 
   useEffect(() => {
     // --- 1. Fetch stats murni dari Supabase ---
@@ -479,25 +478,21 @@ export default function Page() {
     // --- 2. SISTEM PENGUNJUNG MURNI SUPABASE (ANTI SPAM) ---
     const handleVisitorCount = async () => {
       try {
-        // Ambil tanggal hari ini sbg validator (Format: YYYY-MM-DD)
         const today = new Date().toISOString().split('T')[0] 
         const lastVisit = localStorage.getItem('lentera_last_visit')
 
-        // Jika belum ada riwayat kunjungan HARI INI, catat ke database
         if (lastVisit !== today) {
            const { error: insertError } = await supabase
             .from('pengunjung')
             .insert([{ ip_address: navigator.userAgent }])  
            
            if (!insertError) {
-             // Kunci di lokal, mencegah penambahan ganda jika di-refresh
              localStorage.setItem('lentera_last_visit', today)
            } else {
              console.error("Gagal mencatat kunjungan ke database:", insertError)
            }
         }
 
-        // Tampilkan total akumulatif ke layar Landing Page
         const { count, error: countError } = await supabase
           .from('pengunjung')
           .select('*', { count: 'exact', head: true })
@@ -511,12 +506,30 @@ export default function Page() {
       }
     }
 
+    // --- 3. Ambil data Feedback / Komentar ---
+    const fetchFeedbacks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('feedback')
+          .select('id, name, topic, rating')
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (error) throw error
+        if (data) setFeedbacks(data)
+      } catch (error) {
+        console.error('Gagal mengambil feedback:', error)
+      }
+    }
+
     fetchStats()
     handleVisitorCount()
+    fetchFeedbacks() // Panggil function fetch feedback-nya
   }, [])
 
   return (
-    <main className="w-full bg-white">
+    <main className="w-full bg-white relative">
       <Navbar />
       <HeroSection
         totalKamus={totalKamus}
@@ -525,8 +538,20 @@ export default function Page() {
       />
       <FeaturesSection />
       <WhySection />
+      
+      {/* TARUH TESTIMONI DI SINI */}
+      <TestimoniSection />
+      
       <CTASection />
       <Footer />
+
+      {/* Widget buat ngisi form */}
+      <FeedbackWidget />
+
+      {/* Widget floating yang pop-up */}
+      {feedbacks && feedbacks.length > 0 && (
+        <FloatingKomentar feedbacks={feedbacks} />
+      )}
     </main>
   )
 }
