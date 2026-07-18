@@ -467,6 +467,45 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     }
   
     // ==========================================
+  // HANDLERS: VIRTUAL KEYBOARD MULOK
+  // ==========================================
+  const insertSpecialChar = (char: string) => {
+    // Ambil elemen yang sedang aktif (ditekan/di-focus) oleh user
+    const activeEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement;
+    
+    // Pastikan elemen tersebut adalah Input text atau Textarea
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.type !== 'file') {
+      const start = activeEl.selectionStart || 0;
+      const end = activeEl.selectionEnd || 0;
+      const text = activeEl.value;
+      
+      const before = text.substring(0, start);
+      const after = text.substring(end, text.length);
+
+      // Trik agar React mendeteksi perubahan value (karena kita memanipulasi DOM secara langsung)
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+      const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+
+      if (activeEl.tagName === 'INPUT' && nativeInputValueSetter) {
+        nativeInputValueSetter.call(activeEl, before + char + after);
+      } else if (activeEl.tagName === 'TEXTAREA' && nativeTextAreaValueSetter) {
+        nativeTextAreaValueSetter.call(activeEl, before + char + after);
+      }
+
+      // Picu event 'input' agar form React ter-update
+      activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // Kembalikan kursor tepat di sebelah kanan huruf yang baru saja dimasukkan
+      setTimeout(() => {
+        activeEl.selectionStart = activeEl.selectionEnd = start + char.length;
+        activeEl.focus();
+      }, 0);
+    } else {
+      alert("Silahkan tap/klik kolom inputan terlebih dahulu sebelum memasukkan huruf istimewa.");
+    }
+  };
+
+    // ==========================================
     // HANDLERS: SEJARAH
     // ==========================================
     const resetFormSejarah = () => {
@@ -832,6 +871,32 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                           </h2>
                           {editingKamusId && <button type="button" onClick={resetFormKamus} className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1 bg-gray-50 px-3 py-1.5 rounded-full"><X className="w-3 h-3" /> Batal</button>}
                         </div>
+
+                        {/* VIRTUAL KEYBOARD MULOK */}
+<div className="bg-[#EBF2EF] border border-[#005C43]/20 p-3 rounded-xl mb-6 flex flex-wrap gap-2 items-center sticky top-0 z-10 shadow-sm">
+  <span className="text-[11px] font-black text-[#005C43] uppercase tracking-wider mr-2">
+    Keyboard<br/>Mulok:
+  </span>
+  {['é', 'è', 'ê', 'ě', 'É', 'È', 'Ê', 'Ě'].map(char => (
+    <button
+      key={char}
+      type="button"
+      // PENTING: Gunakan onMouseDown dan preventDefault agar input tidak kehilangan fokus (blur) saat tombol ditekan
+      onMouseDown={(e) => {
+        e.preventDefault(); 
+        insertSpecialChar(char);
+      }}
+      className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-[#005C43]/30 rounded-lg shadow-sm hover:bg-[#005C43] hover:text-white font-bold text-sm md:text-base transition-all active:scale-95"
+    >
+      {char}
+    </button>
+  ))}
+  <div className="w-full sm:w-auto ml-auto mt-2 sm:mt-0">
+    <p className="text-[10px] text-gray-500 font-medium bg-white/50 px-2 py-1 rounded border border-gray-200">
+      💡 Klik form input, lalu klik huruf.
+    </p>
+  </div>
+</div>
                         
                         <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
                           <div>

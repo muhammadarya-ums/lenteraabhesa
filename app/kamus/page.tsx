@@ -295,7 +295,10 @@ export default function KamusPage() {
   const [selectedLetter, setSelectedLetter] = useState('')
   const [selectedItem, setSelectedItem] = useState<VocabularyItem | null>(null)
 
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+  const alphabet = [
+  'A', 'B', 'C', 'D', 'E', 'È', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+]
 
   useEffect(() => {
     const fetchVocabulary = async () => {
