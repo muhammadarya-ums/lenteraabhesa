@@ -153,9 +153,11 @@ export default function SusunKataPage() {
   const [isGameFinished, setIsGameFinished] = useState(false)
 
   const wrongAudioRef = useRef<HTMLAudioElement | null>(null)
+  const correctAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  useEffect(() => {
+ useEffect(() => {
     wrongAudioRef.current = new Audio('/sounds/salah.mp3')
+    correctAudioRef.current = new Audio('/sounds/benar.mp3') // 👈 Tambahin baris ini
     fetchScrambleData()
   }, [])
 
@@ -212,6 +214,13 @@ export default function SusunKataPage() {
     if (wrongAudioRef.current) {
       wrongAudioRef.current.currentTime = 0
       wrongAudioRef.current.play().catch(e => console.log('Audio play failed:', e))
+    }
+  }
+
+  const playCorrectSound = () => {
+    if (correctAudioRef.current) {
+      correctAudioRef.current.currentTime = 0
+      correctAudioRef.current.play().catch(e => console.log('Audio play failed:', e))
     }
   }
 
@@ -286,10 +295,12 @@ export default function SusunKataPage() {
     setIsCorrect(correct)
 
     if (correct) {
+      playCorrectSound() // 👈 Panggil fungsinya di sini pas jawaban bener
       setScore(prev => prev + 100)
     } else {
       playWrongSound()
       const newLives = lives - 1
+      // ... sisa kode tidak perlu diubah
       setLives(newLives)
       if (newLives <= 0) {
         setTimeout(() => {
