@@ -16,6 +16,7 @@ interface QuestionFormat {
   indonesianMeaning: string
 }
 
+// 1. COMPONENT: Navbar
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -24,28 +25,30 @@ const Navbar = () => {
     { name: 'Beranda', path: '/' },
     { name: 'Kamus', path: '/kamus' },
     { name: 'Sejarah', path: '/sejarah' },
-    { name: 'Game🚀', path: '/game' },
+    { name: 'Game 🚀', path: '/game' },
     { name: 'Tentang Kami', path: '/tentang-kami' },
   ]
 
   return (
     <nav className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div className="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
+        {/* Logo */}
         <div className="flex items-center">
           <Link href="/">
-            <Image src="/logo.png" alt="Lentera Abhesa" width={100} height={50} priority className="cursor-pointer" />
+            <Image src="/logo.png" alt="Lentera Abhesa" width={90} height={30} priority className="cursor-pointer" />
           </Link>
         </div>
 
-        <div className="hidden md:flex gap-6">
+        {/* Desktop Menu */}
+        <div className="hidden md:flex gap-8">
           {menuItems.map((item) => {
-            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
+            const isActive = item.name === 'Tentang Kami'
             return (
               <Link 
                 key={item.name} 
                 href={item.path} 
-                className={`text-sm font-semibold transition-colors ${
-                  isActive ? 'text-[#005C43]' : 'text-gray-700 hover:text-[#005C43]'
+                className={`text-[15px] font-medium transition-colors ${
+                  isActive ? 'text-[#005C43] font-bold' : 'text-gray-500 hover:text-[#005C43]'
                 }`}
               >
                 {item.name}
@@ -54,34 +57,54 @@ const Navbar = () => {
           })}
         </div>
 
-        <button className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2 font-bold text-sm hover:opacity-90 transition-opacity">
-          Dukung Kami
-        </button>
+        {/* Right Buttons (Desktop Only) -> Dibungkus div biar justify-between rapi */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link 
+            href="/dukungkami" 
+            className="bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
+          >
+            Dukung Kami
+          </Link>
+          <Link 
+            href="/tanya-lentera" 
+            className="border-2 border-[#005C43] text-[#005C43] rounded-full px-6 py-2.5 font-medium text-[15px] hover:bg-gray-50 transition-colors text-center"
+          >
+            Tanya Lentera AI
+          </Link>
+        </div>
 
+        {/* Hamburger Icon (Mobile) */}
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : '☰'}
+          {isMobileMenuOpen ? '✕' : '☰'}
         </button>
       </div>
 
+      {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
-          {menuItems.map((item) => {
-            const isActive = pathname.startsWith(item.path) && (item.path !== '/' || pathname === '/')
-            return (
-              <Link 
-                key={item.name} 
-                href={item.path} 
-                onClick={() => setIsMobileMenuOpen(false)} 
-                className={`text-left font-semibold transition-colors ${
-                  isActive ? 'text-[#005C43]' : 'text-gray-700'
-                }`}
-              >
-                {item.name}
-              </Link>
-            )
-          })}
-          <Link href="/dukungkami" className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center">
+        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4">
+          {menuItems.map((item) => (
+            <Link 
+              key={item.name} 
+              href={item.path} 
+              onClick={() => setIsMobileMenuOpen(false)} 
+              className="text-left font-semibold text-gray-700"
+            >
+              {item.name}
+            </Link>
+          ))}
+          
+          {/* Bagian ini gue ilangin hidden md:block-nya biar beneran muncul di HP */}
+          <Link 
+            href="/dukungkami" 
+            className="w-full bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center mt-2"
+          >
             Dukung Kami
+          </Link>
+          <Link 
+            href="/tanya-lentera" 
+            className="w-full border-2 border-[#005C43] text-[#005C43] rounded-full px-6 py-2.5 font-medium text-[15px] hover:bg-gray-50 transition-colors text-center"
+          >
+            Tanya Lentera AI
           </Link>
         </div>
       )}

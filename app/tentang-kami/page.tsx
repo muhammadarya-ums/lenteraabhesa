@@ -6,9 +6,7 @@ import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-// ==========================================
-// 1. COMPONENT: Navbar (UI ASLI LU)
-// ==========================================
+// 1. COMPONENT: Navbar
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -22,12 +20,12 @@ const Navbar = () => {
   ]
 
   return (
-    <nav className="w-full bg-white sticky top-0 z-50">
+    <nav className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
         {/* Logo */}
         <div className="flex items-center">
           <Link href="/">
-            <Image src="/logo.png" alt="Lentera Abhesa" width={140} height={60} priority className="cursor-pointer" />
+            <Image src="/logo.png" alt="Lentera Abhesa" width={90} height={30} priority className="cursor-pointer" />
           </Link>
         </div>
 
@@ -49,13 +47,21 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* Right Button (Desktop Only) */}
-        <Link 
-  href="/dukungkami" 
-  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
->
-  Dukung Kami
-</Link>
+        {/* Right Buttons (Desktop Only) -> Dibungkus div biar justify-between rapi */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link 
+            href="/dukungkami" 
+            className="bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
+          >
+            Dukung Kami
+          </Link>
+          <Link 
+            href="/tanya-lentera" 
+            className="border-2 border-[#005C43] text-[#005C43] rounded-full px-6 py-2.5 font-medium text-[15px] hover:bg-gray-50 transition-colors text-center"
+          >
+            Tanya Lentera AI
+          </Link>
+        </div>
 
         {/* Hamburger Icon (Mobile) */}
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
@@ -76,12 +82,20 @@ const Navbar = () => {
               {item.name}
             </Link>
           ))}
+          
+          {/* Bagian ini gue ilangin hidden md:block-nya biar beneran muncul di HP */}
           <Link 
-  href="/dukungkami" 
-  className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
->
-  Dukung Kami
-</Link>
+            href="/dukungkami" 
+            className="w-full bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center mt-2"
+          >
+            Dukung Kami
+          </Link>
+          <Link 
+            href="/tanya-lentera" 
+            className="w-full border-2 border-[#005C43] text-[#005C43] rounded-full px-6 py-2.5 font-medium text-[15px] hover:bg-gray-50 transition-colors text-center"
+          >
+            Tanya Lentera AI
+          </Link>
         </div>
       )}
     </nav>

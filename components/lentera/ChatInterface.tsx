@@ -99,7 +99,7 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Halo! Engko Lentera AI. Bhede se bisa e banto soal basa bân sejarah Bawean?',
+      text: 'Halo, Bule Lentera AI, Bede se bisa nanti soal bhesa ken sejarah Bawean?',
       sender: 'bot',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }

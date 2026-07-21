@@ -1,10 +1,13 @@
 'use client'
 
 import React, { useState } from 'react'
+import { usePathname } from 'next/navigation' // <-- TAMBAHAN 1: Import usePathname
 import { MessageSquarePlus, X, Send, CheckCircle2, Loader2, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function FeedbackWidget() {
+  const pathname = usePathname() // <-- TAMBAHAN 2: Inisialisasi pathname
+  
   const [isOpen, setIsOpen] = useState(false)
   const [topic, setTopic] = useState('')
   const [message, setMessage] = useState('')
@@ -13,6 +16,13 @@ export default function FeedbackWidget() {
   const [hoveredRating, setHoveredRating] = useState(0)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+
+  // <-- TAMBAHAN 3: Logika untuk menyembunyikan widget
+  // PENTING: Pastikan '/tanya-lentera' sesuai dengan nama folder halaman AI lo.
+  // Kalau URL halamannya '/ai', ganti jadi pathname === '/ai'
+  if (pathname === '/tanya-lentera') {
+    return null
+  }
 
   const topics = [
     { id: 'saran', label: '💡 Ide/Saran' },
@@ -32,7 +42,7 @@ export default function FeedbackWidget() {
         .insert([{ 
           topic, 
           message, 
-          name: name || 'Anonim', // Kalau user gak isi nama, otomatis jadi 'Anonim'
+          name: name || 'Anonim', 
           rating 
         }])
 

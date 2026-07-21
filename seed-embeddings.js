@@ -47,8 +47,16 @@ async function processKamus() {
   for (const row of kamus) {
     console.log(`Memproses Kamus ID: ${row.id} | Kata: ${row.arti_indonesia}`);
 
-    const textToEmbed = `Kata Bawean: ${row.kata_alos || row.kata_sedang || row.kata_kasar || ''}. Artinya: ${row.arti_indonesia || 'Tidak ada arti'}`;
-    const embedding = await generateEmbedding(textToEmbed);
+// Filter tanda strip agar tidak ikut terbaca
+const alos = (row.kata_alos && row.kata_alos !== '-') ? `Alos: ${row.kata_alos}` : '';
+const sedang = (row.kata_sedang && row.kata_sedang !== '-') ? `Sedang: ${row.kata_sedang}` : '';
+const kasar = (row.kata_kasar && row.kata_kasar !== '-') ? `Kasar: ${row.kata_kasar}` : '';
+
+// Gabungkan tingkatan bahasa yang ada isinya
+const kumpulanKata = [alos, sedang, kasar].filter(Boolean).join(', ');
+
+const textToEmbed = `Kosakata Bawean - ${kumpulanKata}. Arti dalam bahasa Indonesia: ${row.arti_indonesia || 'Tidak ada arti'}`;
+const embedding = await generateEmbedding(textToEmbed);
     
     if (embedding) {
       const { error: updateError } = await supabase.from('kamus').update({ embedding }).eq('id', row.id);

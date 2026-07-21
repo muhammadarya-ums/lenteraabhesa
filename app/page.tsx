@@ -352,7 +352,8 @@ const WhySection = () => (
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
         <div className="md:col-span-2 flex flex-col gap-4">
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-[260px] flex flex-col justify-start">
+          {/* PERBAIKAN 1: Ganti h-[280px] jadi h-auto min-h-[280px] */}
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-auto min-h-[280px] flex flex-col justify-start">
             <h3 className="text-3xl font-extrabold mb-4">Pulau Bawean</h3>
             <p className="text-base text-gray-100 leading-relaxed">
               Bawean merupakan sebuah pulau kecil yang terletak di bagian utara pulau Jawa. Secara administratif, pulau ini termasuk ke dalam wilayah pemerintahan kabupaten Gresik, Jawa Timur. Dalam kehidupan sehari-hari, masyarakat pulau Bawean berkomunikasi dengan menggunakan bahasa Bawean, yang biasanya disebut masyarakat setempat sebagai bahasa Bahasa Bhebien.
@@ -367,7 +368,8 @@ const WhySection = () => (
           <div className="rounded-3xl overflow-hidden bg-gray-200 h-[320px] relative">
             <Image src="/rumah.png" alt="Foto Rumah Bawean" fill className="object-cover" priority />
           </div>
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-[260px] flex flex-col justify-start">
+          {/* PERBAIKAN 2: Ganti h-[260px] jadi h-auto min-h-[260px] */}
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-auto min-h-[260px] flex flex-col justify-start">
             <h3 className="text-2xl font-extrabold mb-3">Edukasi Interaktif</h3>
             <p className="text-sm text-gray-100 leading-relaxed">
               Menghadirkan alternatif pembelajaran bahasa lokal yang dinamis dan sistematis. Lewat pendekatan digital yang interaktif, generasi muda dan generasi lainnya dapat mengenali susunan kosakata dan konteks tutur luhur Bawean dengan lebih mudah dan terarah.
@@ -380,7 +382,8 @@ const WhySection = () => (
             <h3 className="text-2xl font-extrabold mb-4">Melestarikan Bahasa</h3>
             <p className="text-base text-gray-100 leading-relaxed">
               Menghidupkan kembali keindahan ragam halus Abhesa melalui platform pembelajaran berbasis teknologi. Inovasi ini hadir sebagai wadah dokumentasi digital sekaligus media interaktif bagi generasi muda untuk merawat identitas budaya Pulau Bawean.
-              ​Secara linguistik, bahasa Bawean kerap dinilai memiliki kemiripan makna dan pelafalan dengan bahasa Jawa serta Madura, fenomena yang dikenal sebagai integrasi. Keunikan relasi bahasa inilah yang juga ingin diabadikan dan dipelajari lebih dalam melalui platform ini.
+              <br/><br/>
+              Secara linguistik, bahasa Bawean kerap dinilai memiliki kemiripan makna dan pelafalan dengan bahasa Jawa serta Madura, fenomena yang dikenal sebagai integrasi. Keunikan relasi bahasa inilah yang juga ingin diabadikan dan dipelajari lebih dalam melalui platform ini.
             </p>
           </div>
         </div>
