@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import FloatingKomentar from '@/components/FloatingKomentar'
 import FeedbackWidget from '@/components/FeedbackWidget'
 import TestimoniSection from '@/components/TestimoniSection'
+import ChatInterface from '@/components/lentera/ChatInterface'
 
 // 1. COMPONENT: Navbar
 const Navbar = () => {
@@ -19,28 +20,30 @@ const Navbar = () => {
     { name: 'Beranda', path: '/' },
     { name: 'Kamus', path: '/kamus' },
     { name: 'Sejarah', path: '/sejarah' },
-    { name: 'Game🚀', path: '/game' },
+    { name: 'Game 🚀', path: '/game' },
     { name: 'Tentang Kami', path: '/tentang-kami' },
   ]
 
   return (
     <nav className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div className="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
+        {/* Logo */}
         <div className="flex items-center">
           <Link href="/">
-            <Image src="/logo.png" alt="Lentera Abhesa" width={100} height={50} priority className="cursor-pointer" />
+            <Image src="/logo.png" alt="Lentera Abhesa" width={90} height={30} priority className="cursor-pointer" />
           </Link>
         </div>
 
-        <div className="hidden md:flex gap-6">
+        {/* Desktop Menu */}
+        <div className="hidden md:flex gap-8">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = item.name === 'Tentang Kami'
             return (
-              <Link
-                key={item.name}
-                href={item.path}
-                className={`text-sm font-semibold transition-colors ${
-                  isActive ? 'text-[#005C43]' : 'text-gray-700 hover:text-[#005C43]'
+              <Link 
+                key={item.name} 
+                href={item.path} 
+                className={`text-[15px] font-medium transition-colors ${
+                  isActive ? 'text-[#005C43] font-bold' : 'text-gray-500 hover:text-[#005C43]'
                 }`}
               >
                 {item.name}
@@ -49,40 +52,54 @@ const Navbar = () => {
           })}
         </div>
 
-        <Link
-          href="/dukungkami"
-          className="hidden md:block bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
-        >
-          Dukung Kami
-        </Link>
+        {/* Right Buttons (Desktop Only) -> Dibungkus div biar justify-between rapi */}
+        <div className="hidden md:flex items-center gap-3">
+          <Link 
+            href="/dukungkami" 
+            className="bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center"
+          >
+            Dukung Kami
+          </Link>
+          <Link 
+            href="/tanya-lentera" 
+            className="border-2 border-[#005C43] text-[#005C43] rounded-full px-6 py-2.5 font-medium text-[15px] hover:bg-gray-50 transition-colors text-center"
+          >
+            Tanya Lentera AI
+          </Link>
+        </div>
 
+        {/* Hamburger Icon (Mobile) */}
         <button className="md:hidden p-2 text-[#005C43]" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? '✕' : '☰'}
         </button>
       </div>
 
+      {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.path
-            return (
-              <Link
-                key={item.name}
-                href={item.path}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`text-left font-semibold transition-colors ${
-                  isActive ? 'text-[#005C43]' : 'text-gray-700'
-                }`}
-              >
-                {item.name}
-              </Link>
-            )
-          })}
-          <Link
-            href="/dukungkami"
-            className="w-full bg-[#005C43] text-white rounded-full py-3 font-bold text-center"
+        <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4">
+          {menuItems.map((item) => (
+            <Link 
+              key={item.name} 
+              href={item.path} 
+              onClick={() => setIsMobileMenuOpen(false)} 
+              className="text-left font-semibold text-gray-700"
+            >
+              {item.name}
+            </Link>
+          ))}
+          
+          {/* Bagian ini gue ilangin hidden md:block-nya biar beneran muncul di HP */}
+          <Link 
+            href="/dukungkami" 
+            className="w-full bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center mt-2"
           >
             Dukung Kami
+          </Link>
+          <Link 
+            href="/tanya-lentera" 
+            className="w-full border-2 border-[#005C43] text-[#005C43] rounded-full px-6 py-2.5 font-medium text-[15px] hover:bg-gray-50 transition-colors text-center"
+          >
+            Tanya Lentera AI
           </Link>
         </div>
       )}
@@ -335,10 +352,10 @@ const WhySection = () => (
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
         <div className="md:col-span-2 flex flex-col gap-4">
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-[240px] flex flex-col justify-start">
-            <h3 className="text-3xl font-extrabold mb-4">Melestarikan Bahasa</h3>
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 md:p-10 h-[260px] flex flex-col justify-start">
+            <h3 className="text-3xl font-extrabold mb-4">Pulau Bawean</h3>
             <p className="text-base text-gray-100 leading-relaxed">
-              Menangani bahasa halus melalui teknologi digital untuk menjangkau lebih banyak generasi muda
+              Bawean merupakan sebuah pulau kecil yang terletak di bagian utara pulau Jawa. Secara administratif, pulau ini termasuk ke dalam wilayah pemerintahan kabupaten Gresik, Jawa Timur. Dalam kehidupan sehari-hari, masyarakat pulau Bawean berkomunikasi dengan menggunakan bahasa Bawean, yang biasanya disebut masyarakat setempat sebagai bahasa Bahasa Bhebien.
             </p>
           </div>
           <div className="rounded-3xl overflow-hidden bg-gray-200 h-[320px] relative">
@@ -347,22 +364,23 @@ const WhySection = () => (
         </div>
 
         <div className="md:col-span-1 flex flex-col gap-4">
-          <div className="rounded-3xl overflow-hidden bg-gray-200 h-[340px] relative">
+          <div className="rounded-3xl overflow-hidden bg-gray-200 h-[320px] relative">
             <Image src="/rumah.png" alt="Foto Rumah Bawean" fill className="object-cover" priority />
           </div>
-          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-[220px] flex flex-col justify-start">
+          <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-6 h-[260px] flex flex-col justify-start">
             <h3 className="text-2xl font-extrabold mb-3">Edukasi Interaktif</h3>
             <p className="text-sm text-gray-100 leading-relaxed">
-              Sediakan akses mudah dan menyenangkan untuk pembelajaran bahasa lokal
+              Menghadirkan alternatif pembelajaran bahasa lokal yang dinamis dan sistematis. Lewat pendekatan digital yang interaktif, generasi muda dan generasi lainnya dapat mengenali susunan kosakata dan konteks tutur luhur Bawean dengan lebih mudah dan terarah.
             </p>
           </div>
         </div>
 
         <div className="md:col-span-1 flex flex-col">
           <div className="rounded-3xl overflow-hidden bg-[#005C43] text-white p-8 flex flex-col justify-start h-full min-h-[300px]">
-            <h3 className="text-2xl font-extrabold mb-4">Budaya Pulau Bawean</h3>
+            <h3 className="text-2xl font-extrabold mb-4">Melestarikan Bahasa</h3>
             <p className="text-base text-gray-100 leading-relaxed">
-              Menjaga tradisi lokal dengan dokumentasi budaya yang komprehensif
+              Menghidupkan kembali keindahan ragam halus Abhesa melalui platform pembelajaran berbasis teknologi. Inovasi ini hadir sebagai wadah dokumentasi digital sekaligus media interaktif bagi generasi muda untuk merawat identitas budaya Pulau Bawean.
+              ​Secara linguistik, bahasa Bawean kerap dinilai memiliki kemiripan makna dan pelafalan dengan bahasa Jawa serta Madura, fenomena yang dikenal sebagai integrasi. Keunikan relasi bahasa inilah yang juga ingin diabadikan dan dipelajari lebih dalam melalui platform ini.
             </p>
           </div>
         </div>
@@ -390,9 +408,12 @@ const CTASection = () => (
           >
             Dukung Kami
           </Link>
-          <button className="px-8 py-3 rounded-full border-2 border-white text-white font-bold hover:bg-white/10 transition-colors">
-            Ikuti Jejak Kami
-          </button>
+          <Link
+            href="/tanya-lentera" // 👈 Mengarah ke halaman rute Next.js
+            className="px-8 py-3 rounded-full border-2 border-white text-white font-bold hover:bg-white/10 transition-colors"
+          >
+            Tanya Lentera AI
+          </Link>
         </div>
       </div>
     </div>
