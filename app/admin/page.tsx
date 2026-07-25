@@ -124,6 +124,9 @@ export default function AdminDashboardPage() {
   const [activeMenu, setActiveMenu] = useState('dashboard')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+  // pencarian kosa kata
+  const [searchKamus, setSearchKamus] = useState('');
+
   // data states
   const [kamusList, setKamusList] = useState<KamusItem[]>([])
   const [sejarahList, setSejarahList] = useState<SejarahItem[]>([])
@@ -954,7 +957,13 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                           <h2 className="text-lg font-black text-gray-900">Arsip Kosakata</h2>
                           <div className="relative w-1/2">
                             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                            <input type="text" placeholder="Cari..." className="pl-9 pr-4 py-2 w-full bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-[#005C43]" />
+                            <input 
+                              type="text" 
+                              placeholder="Cari..." 
+                              value={searchKamus} // <-- Tambahkan ini
+                              onChange={(e) => setSearchKamus(e.target.value)} // <-- Tambahkan ini
+                              className="pl-9 pr-4 py-2 w-full bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-[#005C43]" 
+                              />
                           </div>
                         </div>
                         
@@ -967,25 +976,64 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                               </tr>
                             </thead>
                             <tbody>
-                              {kamusList.map((item) => (
+                            {kamusList
+                              .filter((item) => {
+                                // Ubah keyword pencarian ke huruf kecil agar case-insensitive
+                                // Pastikan lo udah bikin state: const [searchKamus, setSearchKamus] = useState('');
+                                const keyword = searchKamus.toLowerCase();
+
+                                // Return true jika keyword ada di arti_indonesia, kata_alos, kata_sedang, atau kata_kasar
+                                return (
+                                  item.arti_indonesia?.toLowerCase().includes(keyword) ||
+                                  item.kata_alos?.toLowerCase().includes(keyword) ||
+                                  item.kata_sedang?.toLowerCase().includes(keyword) ||
+                                  item.kata_kasar?.toLowerCase().includes(keyword)
+                                );
+                              })
+                              .map((item) => (
                                 <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 group">
                                   <td className="p-4">
                                     <p className="font-black text-gray-900 text-base mb-1.5">{item.arti_indonesia}</p>
                                     <div className="flex flex-col gap-1">
-                                      {item.kata_alos && <span className="font-bold text-emerald-700 text-xs"><span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded mr-2 uppercase">Alus</span>{item.kata_alos}</span>}
-                                      {item.kata_sedang && <span className="font-bold text-blue-700 text-xs"><span className="text-[9px] bg-blue-100 text-blue-800 px-1 rounded mr-2 uppercase">Sdg</span>{item.kata_sedang}</span>}
-                                      {item.kata_kasar && <span className="font-bold text-red-700 text-xs"><span className="text-[9px] bg-red-100 text-red-800 px-1 rounded mr-2 uppercase">Ksr</span>{item.kata_kasar}</span>}
+                                      {item.kata_alos && (
+                                        <span className="font-bold text-emerald-700 text-xs">
+                                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded mr-2 uppercase">Alus</span>
+                                          {item.kata_alos}
+                                        </span>
+                                      )}
+                                      {item.kata_sedang && (
+                                        <span className="font-bold text-blue-700 text-xs">
+                                          <span className="text-[9px] bg-blue-100 text-blue-800 px-1 rounded mr-2 uppercase">Sdg</span>
+                                          {item.kata_sedang}
+                                        </span>
+                                      )}
+                                      {item.kata_kasar && (
+                                        <span className="font-bold text-red-700 text-xs">
+                                          <span className="text-[9px] bg-red-100 text-red-800 px-1 rounded mr-2 uppercase">Ksr</span>
+                                          {item.kata_kasar}
+                                        </span>
+                                      )}
                                     </div>
                                   </td>
                                   <td className="p-4 text-right align-top pt-5">
                                     <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button onClick={() => handleEditClickKamus(item)} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"><Edit3 className="w-4 h-4" /></button>
-                                      <button onClick={() => handleDelete('kamus', item.id)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                                      <button 
+                                        onClick={() => handleEditClickKamus(item)} 
+                                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"
+                                      >
+                                        <Edit3 className="w-4 h-4" />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDelete('kamus', item.id)} 
+                                        className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
                                     </div>
                                   </td>
                                 </tr>
                               ))}
-                            </tbody>
+                          </tbody>
                           </table>
                         </div>
                       </div>
