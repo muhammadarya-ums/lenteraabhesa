@@ -6,7 +6,9 @@ import Image from "next/image"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+// ==========================================
 // 1. COMPONENT: Navbar
+// ==========================================
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -47,7 +49,7 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* Right Buttons (Desktop Only) -> Dibungkus div biar justify-between rapi */}
+        {/* Right Buttons (Desktop Only) */}
         <div className="hidden md:flex items-center gap-3">
           <Link 
             href="/dukungkami" 
@@ -83,7 +85,6 @@ const Navbar = () => {
             </Link>
           ))}
           
-          {/* Bagian ini gue ilangin hidden md:block-nya biar beneran muncul di HP */}
           <Link 
             href="/dukungkami" 
             className="w-full bg-[#005C43] text-white rounded-full px-6 py-2.5 font-medium text-[15px] hover:opacity-90 transition-opacity text-center mt-2"
@@ -103,7 +104,7 @@ const Navbar = () => {
 }
 
 // ==========================================
-// 2. COMPONENT: Header Section (UI ASLI LU)
+// 2. COMPONENT: Header Section
 // ==========================================
 const HeaderSection = () => (
   <section className="w-full px-6 py-12 bg-white">
@@ -128,13 +129,12 @@ const HeaderSection = () => (
 )
 
 // ==========================================
-// 3. COMPONENT: Proposal Section (UI GUE YANG LEBIH BAGUS)
+// 3. COMPONENT: Proposal Section
 // ==========================================
 const ProposalSection = () => {
-  // Fungsi untuk memaksa download agar tidak kena redirect
   const handleDownload = async () => {
     try {
-      const response = await fetch('/proposal.pdf'); // Nama file harus sama dengan di folder public
+      const response = await fetch('/proposal.pdf');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -154,8 +154,8 @@ const ProposalSection = () => {
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_2.2fr] gap-12 lg:gap-16 items-center">
           
-          {/* Card Proposal */}
-          <div className="w-full aspect-[3/4] max-h-[420px] rounded-[24px] shadow-[0_10px_30px_rgba(0,0,0,0.06)] border border-gray-100 bg-[#FAFBFB] flex flex-col justify-between p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          {/* Card Proposal (Tailwind class diperbaiki jadi aspect-3/4 max-h-105) */}
+          <div className="w-full aspect-3/4 max-h-105 rounded-[24px] shadow-[0_10px_30px_rgba(0,0,0,0.06)] border border-gray-100 bg-[#FAFBFB] flex flex-col justify-between p-8 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#EBF2EF] rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-[#DCEBE5] transition-colors"></div>
             <div className="flex justify-between items-start z-10">
               <BookOpen className="w-10 h-10 text-[#005C43]" />
@@ -168,27 +168,27 @@ const ProposalSection = () => {
           </div>
 
           {/* Right: Actual Academic Context from OPSI Paper */}
-        <div className="flex flex-col">
-          <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Award className="w-7 h-7 text-[#005C43]" />
-            Latar Belakang Proyek OPSI
-          </h3>
-          
-          <p className="text-[16px] text-gray-700 leading-relaxed mb-6 text-justify">
-            Di era globalisasi, generasi muda Bawean mengalami degradasi linguistik yang cukup signifikan. 
-            Para generasi muda saat ini cenderung hanya menguasai ragam bahasa kasar atau bahkan beralih sepenuhnya 
-            menggunakan bahasa Indonesia dalam komunikasi harian. Memudarnya penguasaan ragam halus (*abhesa alos*) 
-            ini secara langsung berdampak buruk pada hilangnya nilai-nilai etika, tata krama, serta jati diri kultural 
-            asli masyarakat Bawean.
-          </p>
-          
-          <p className="text-[16px] text-gray-700 leading-relaxed mb-8 text-justify">
-            Melalui gagasan platform <strong>"Lentera Abhesa"</strong>, penelitian ini menyelaraskan strategi pelestarian 
-            bahasa ibu menggunakan teknologi interaktif yang mudah diakses. Fokusnya adalah menciptakan ekosistem pembelajaran 
-            digital yang komprehensif, mencakup pencarian leksikal presisi, klasifikasi hierarki kesopanan, dan dukungan multimedia.
-          </p>
+          <div className="flex flex-col">
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Award className="w-7 h-7 text-[#005C43]" />
+              Latar Belakang Proyek OPSI
+            </h3>
+            
+            <p className="text-[16px] text-gray-700 leading-relaxed mb-6 text-justify">
+              Di era globalisasi, generasi muda Bawean mengalami degradasi linguistik yang cukup signifikan. 
+              Para generasi muda saat ini cenderung hanya menguasai ragam bahasa kasar atau bahkan beralih sepenuhnya 
+              menggunakan bahasa Indonesia dalam komunikasi harian. Memudarnya penguasaan ragam halus (*abhesa alos*) 
+              ini secara langsung berdampak buruk pada hilangnya nilai-nilai etika, tata krama, serta jati diri kultural 
+              asli masyarakat Bawean.
+            </p>
+            
+            <p className="text-[16px] text-gray-700 leading-relaxed mb-8 text-justify">
+              Melalui gagasan platform <strong>"Lentera Abhesa"</strong>, penelitian ini menyelaraskan strategi pelestarian 
+              bahasa ibu menggunakan teknologi interaktif yang mudah diakses. Fokusnya adalah menciptakan ekosistem pembelajaran 
+              digital yang komprehensif, mencakup pencarian leksikal presisi, klasifikasi hierarki kesopanan, dan dukungan multimedia.
+            </p>
 
-            {/* Tombol yang dipaksa download via fungsi di atas */}
+            {/* Tombol Download */}
             <button 
               onClick={handleDownload}
               className="inline-flex items-center gap-3 bg-[#005C43] hover:bg-[#004431] text-white font-medium text-[16px] px-6 py-3.5 rounded-full transition-all duration-200 shadow-md w-fit group"
@@ -203,8 +203,9 @@ const ProposalSection = () => {
     </section>
   );
 };
+
 // ==========================================
-// 4. COMPONENT: Team Section (UI ASLI LU)
+// 4. COMPONENT: Team Section
 // ==========================================
 const TeamSection = () => (
   <section className="w-full px-6 py-16 bg-white">
@@ -217,33 +218,56 @@ const TeamSection = () => (
 
       {/* Team Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-12">
+        
         {/* Card 1: Rossalinda */}
         <div className="flex flex-col">
-          <div className="w-full aspect-square rounded-[32px] bg-[#EBF2EF] mb-4"></div>
+          <div className="relative w-full aspect-square rounded-[32px] bg-[#EBF2EF] mb-4 overflow-hidden">
+            <Image
+              src="/team/rosa.webp" 
+              alt="Foto Rosa Diah Shinvani"
+              fill
+              className="object-cover"
+            />
+          </div>
           <h3 className="text-lg font-bold text-black">Rosa Diah Shinvani, S.Pd., Gr.</h3>
           <p className="text-[15px] text-gray-800">Guru Pembimbing</p>
         </div>
 
         {/* Card 2: Adelia */}
         <div className="flex flex-col">
-          <div className="w-full aspect-square rounded-[32px] bg-[#EBF2EF] mb-4"></div>
+          <div className="relative w-full aspect-square rounded-[32px] bg-[#EBF2EF] mb-4 overflow-hidden">
+            <Image
+              src="/team/adela.webp"
+              alt="Foto Najwa Adela Humairah"
+              fill
+              className="object-cover"
+            />
+          </div>
           <h3 className="text-lg font-bold text-black">Najwa Adela Humairah</h3>
           <p className="text-[15px] text-gray-800">Siswa</p>
         </div>
 
         {/* Card 3: Dewi Kartika */}
         <div className="flex flex-col">
-          <div className="w-full aspect-square rounded-[32px] bg-[#EBF2EF] mb-4"></div>
+          <div className="relative w-full aspect-square rounded-[32px] bg-[#EBF2EF] mb-4 overflow-hidden">
+            <Image
+              src="/team/dewi.webp"
+              alt="Foto Dewi Kartika Sari"
+              fill
+              className="object-cover"
+            />
+          </div>
           <h3 className="text-lg font-bold text-black">Dewi Kartika Sari</h3>
           <p className="text-[15px] text-gray-800">Siswa</p>
         </div>
+        
       </div>
-    </div>
+    </div> {/* <-- TAG PENUTUP INI YANG SEBELUMNYA HILANG */}
   </section>
 )
 
 // ==========================================
-// 5. COMPONENT: Support Section (UI ASLI LU)
+// 5. COMPONENT: Support Section
 // ==========================================
 const SupportSection = () => (
   <section className="w-full px-6 py-20 bg-white">
@@ -251,9 +275,9 @@ const SupportSection = () => (
       <p className="text-[18px] text-black">Didukung penuh oleh</p>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-10 md:gap-12">
-        {/* Logo 1: SMAN 1 Sangkapura */}
+        {/* Logo 1: SMAN 1 Sangkapura (Tailwind diperbaiki w-20 h-22.5) */}
         <div className="flex items-center gap-4">
-          <div className="w-[80px] h-[90px] relative">
+          <div className="w-20 h-22.5 relative">
              <Image src="/SMA.png" alt="SMA NEGERI 1 SANGKAPURA" fill className="object-contain" />
           </div>
           <div className="flex flex-col">
@@ -262,9 +286,9 @@ const SupportSection = () => (
           </div>
         </div>
 
-        {/* Logo 2: Disdik Gresik */}
+        {/* Logo 2: Disdik Gresik (Tailwind diperbaiki w-20 h-22.5) */}
         <div className="flex items-center gap-4">
-          <div className="w-[80px] h-[90px] relative">
+          <div className="w-20 h-22.5 relative">
              <Image src="/DINAS.png" alt="DINAS PENDIDIKAN KAB GRESIK" fill className="object-contain" />
           </div>
           <div className="flex flex-col">
@@ -277,6 +301,9 @@ const SupportSection = () => (
   </section>
 )
 
+// ==========================================
+// 6. COMPONENT: Footer
+// ==========================================
 const Footer = () => (
   <footer className="w-full bg-[#EAF2ED] py-12 px-8 mt-12">
     <div className="max-w-7xl mx-auto">

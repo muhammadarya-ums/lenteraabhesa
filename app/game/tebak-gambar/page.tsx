@@ -221,12 +221,12 @@ export default function TebakGambarPage() {
         return {
           id: item.id,
           image: item.image_url,
-          question: item.pertanyaan,
+          question: item.question,
           options: shuffledOptions,
           correctAnswer: item.jawaban_benar,
-          hint: item.clue,
-          explanation: item.penjelasan,
-          culturalFact: item.fakta_budaya
+          hint: item.hint,
+          explanation: item.explanation,
+          culturalFact: item.cultural_fact || item.culturalfact
         }
       })
 
