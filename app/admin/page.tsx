@@ -1048,6 +1048,31 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                         <button onClick={() => setActiveGameTab('tebak_kata')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'tebak_kata' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Tebak Kata</button>
                         <button onClick={() => setActiveGameTab('susun_kata')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'susun_kata' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Susun Kata</button>
                       </div>
+
+                      {/* VIRTUAL KEYBOARD MULOK UNTUK GAME */}
+              <div className="bg-[#EBF2EF] border border-[#005C43]/20 p-3 rounded-xl flex flex-wrap gap-2 items-center sticky top-0 z-10 shadow-sm">
+                <span className="text-[11px] font-black text-[#005C43] uppercase tracking-wider mr-2">
+                  Keyboard<br/>Mulok:
+                </span>
+                {['é', 'è', 'ê', 'ě', 'É', 'È', 'Ê', 'Ě'].map(char => (
+                  <button
+                    key={char}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault(); 
+                      insertSpecialChar(char);
+                    }}
+                    className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-[#005C43]/30 rounded-lg shadow-sm hover:bg-[#005C43] hover:text-white font-bold text-sm md:text-base transition-all active:scale-95"
+                  >
+                    {char}
+                  </button>
+                ))}
+                <div className="w-full sm:w-auto ml-auto mt-2 sm:mt-0">
+                  <p className="text-[10px] text-gray-500 font-medium bg-white/50 px-2 py-1 rounded border border-gray-200">
+                    💡 Klik form input, lalu klik huruf.
+                  </p>
+                </div>
+              </div>
         
                       {activeGameTab === 'tebak_gambar' && (
                         <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6 items-start">
