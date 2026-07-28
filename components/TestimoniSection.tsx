@@ -53,7 +53,7 @@ export default function TestimoniSection() {
         
         {/* Header Section */}
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Kata Komunitas 💬</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Kata Mereka Tentang Lentera Abhesa</h2>
           <p className="text-gray-500 max-w-2xl mx-auto">
             Terima kasih atas dukungan dan saran dari teman-teman untuk Lentera Abhesa.
           </p>

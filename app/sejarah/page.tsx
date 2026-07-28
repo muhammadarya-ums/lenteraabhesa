@@ -190,14 +190,14 @@ const Footer = () => (
         <div className="flex flex-col">
             <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
             <ul className="space-y-2 text-sm text-gray-700">
-                <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+                <li><a href="https://www.instagram.com/lentera.abhesa?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
                 <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
             </ul>
         </div>
         <div className="flex flex-col">
             <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
             <ul className="space-y-2 text-sm text-gray-700">
-                <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+                <li><a href="mailto:lenteraabhesa@gmail.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
             </ul>
         </div>
       </div>

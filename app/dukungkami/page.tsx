@@ -475,7 +475,7 @@ const Footer = () => (
         <div className="flex flex-col">
           <h4 className="font-bold text-gray-900 text-base mb-4 uppercase tracking-wider text-xs">Media Sosial</h4>
           <ul className="space-y-3 text-sm font-semibold text-gray-500">
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+            <li><a href="https://www.instagram.com/lentera.abhesa?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
             <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
             <li><a href="#" className="hover:text-[#005C43] transition-colors">YouTube</a></li>
           </ul>
@@ -483,7 +483,7 @@ const Footer = () => (
         <div className="flex flex-col">
           <h4 className="font-bold text-gray-900 text-base mb-4 uppercase tracking-wider text-xs">Kontak</h4>
           <ul className="space-y-3 text-sm font-semibold text-gray-500">
-            <li><a href="mailto:info@lenteraabhesa.com" className="hover:text-[#005C43] transition-colors">hello@lenteraabhesa.com</a></li>
+            <li><a href="mailto:lenteraabhesa@gmail.com" className="hover:text-[#005C43] transition-colors">hello@lenteraabhesa.com</a></li>
             <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">+62 812 3456 7890</a></li>
           </ul>
         </div>

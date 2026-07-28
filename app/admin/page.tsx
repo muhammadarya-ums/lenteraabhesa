@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import {supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import {
     LogOut, Activity, BookOpen, FileText, ShoppingBag, Users as UsersIcon, Gamepad2,
     Loader2, UserCircle, Plus, Trash2, Edit3, Search, X, Menu,
     Save, Package, ClipboardList, Check, AlertCircle, UploadCloud,
-    MessageCircle, Send
+    MessageCircle, Send, ShieldCheck, EyeOff, Star
 } from 'lucide-react'
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -17,9 +17,7 @@ import {
 // interfaces schema database user
 interface KamusItem {
   id: string
-
   arti_indonesia: string
-
   kata_alos: string | null
   contoh_kalimat_alos: string | null
   arti_contoh_alos: string | null
@@ -102,21 +100,30 @@ interface ProfilAdmin {
   role: 'admin' | 'teknisi';
 }
 
+// Interface Baru untuk Komentar
+interface KomentarItem {
+  id: string;
+  name: string;
+  email: string | null;
+  message: string;
+  rating: number;
+  is_published: boolean;
+  created_at: string;
+}
+
 export default function AdminDashboardPage() {
     const router = useRouter();
     const handleLogout = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) throw error;
-
-    router.replace("/admin/login");
-    router.refresh();
-  } catch (err) {
-    console.error("Logout gagal:", err);
-    alert("Logout gagal.");
-  }
-};
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        router.replace("/admin/login");
+        router.refresh();
+      } catch (err) {
+        console.error("Logout gagal:", err);
+        alert("Logout gagal.");
+      }
+    };
 
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
@@ -135,10 +142,11 @@ export default function AdminDashboardPage() {
   const [tgList, setTgList] = useState<TebakGambarItem[]>([])
   const [produkList, setProdukList] = useState<ProdukItem[]>([])
   const [pesananList, setPesananList] = useState<PesananItem[]>([])
+  const [komentarList, setKomentarList] = useState<KomentarItem[]>([]) // State Komentar
   const [filterPesanan, setFilterPesanan] = useState<string>('Semua')
   const [uploadingBuktiId, setUploadingBuktiId] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth())
-const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // analytics states
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'jam' | 'hari' | 'minggu' | 'bulan'>('hari')
@@ -160,7 +168,6 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [unreadCount, setUnreadCount] = useState(0)
   const activeChatRef = useRef({ isOpen: false, contactId: null as string | null })
 
-  // Update ref setiap ada perubahan status chat supaya listener notif selalu dapet data terbaru
   useEffect(() => {
     activeChatRef.current = { isOpen: isChatOpen, contactId: selectedContact?.id || null }
     if (isChatOpen) setUnreadCount(0)
@@ -236,10 +243,17 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     const { data } = await supabase.from('pesanan').select('*').order('created_at', { ascending: false })
     if (data) setPesananList(data as PesananItem[])
   }
+  const fetchKomentar = async () => {
+  const { data, error } = await supabase.from('feedback').select('*').order('created_at', { ascending: false })
+  if (error) {
+    console.error("Error fetching komentar:", error.message)
+  }
+  if (data) {
+    setKomentarList(data as KomentarItem[])
+  }
+}
 
-
-
-// INITIAL LOAD
+  // INITIAL LOAD
   useEffect(() => {
     const initDashboard = async () => {
       try {
@@ -247,12 +261,19 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
         if (error || !session) return router.push('/admin/login')
         
         setCurrentUserId(session.user.id)
+        if (session.user.email) setAdminEmail(session.user.email)
 
-        // Fetch Profil Admin Pengguna saat ini
         const { data: prof } = await supabase.from('profil_admin').select('*').eq('id', session.user.id).single()
         if (prof) setAdminProfile(prof as ProfilAdmin)
 
-        await Promise.all([fetchKamus(), fetchSejarah(), fetchGames(), fetchProduk(), fetchPesanan()])
+        await Promise.all([
+            fetchKamus(), 
+            fetchSejarah(), 
+            fetchGames(), 
+            fetchProduk(), 
+            fetchPesanan(),
+            fetchKomentar() // <-- Tambah fetch komentar di sini
+        ])
         
         const { count: countPengunjung } = await supabase.from('pengunjung').select('*', { count: 'exact', head: true })
         setTotalPengunjung(countPengunjung || 0)
@@ -283,23 +304,17 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     fetchContacts()
   }, [currentUserId])
 
-  // ==========================================
-  // GLOBAL NOTIFICATION LISTENER (BARU)
-  // ==========================================
+  // GLOBAL NOTIFICATION LISTENER
   useEffect(() => {
     if (!currentUserId) return
-
     const notifChannel = supabase
       .channel('global-notif')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const msg = payload.new
-        // Jika pesan ditujukan untuk user ini
         if (msg.receiver_id === currentUserId) {
           const { isOpen, contactId } = activeChatRef.current
-          // Tambah badge unread jika chat ditutup ATAU sedang chat dengan orang lain
           if (!isOpen || contactId !== msg.sender_id) {
             setUnreadCount(prev => prev + 1)
-            // Mainkan suara notifikasi
             try {
               const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')
               audio.play().catch(() => {})
@@ -309,25 +324,20 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
       })
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(notifChannel)
-    }
+    return () => { supabase.removeChannel(notifChannel) }
   }, [currentUserId])
 
-  // CHAT REAL-TIME SUBSCRIPTION (UNTUK RUANG OBROLAN AKTIF)
+  // CHAT REAL-TIME SUBSCRIPTION
   useEffect(() => {
     if (!currentUserId || !selectedContact) return
-
     const fetchMessages = async () => {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${selectedContact.id}),and(sender_id.eq.${selectedContact.id},receiver_id.eq.${currentUserId})`)
         .order('created_at', { ascending: true })
-
       if (!error && data) setMessages(data)
     }
-
     fetchMessages()
 
     const channel = supabase
@@ -342,10 +352,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
         }
       })
       .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [currentUserId, selectedContact])
 
   useEffect(() => {
@@ -395,7 +402,6 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
       generateChartData()
     }, [analyticsPeriod, selectedMonth, selectedYear])
   
-
     const uploadFile = async (file: File | null, bucket: string) => {
         if (!file) return null;
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${file.name.split('.').pop()}`
@@ -403,22 +409,17 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
         if (error) throw new Error(`Gagal upload file: ${error.message}`)
         const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName)
         return publicUrl
-      }
-      const clearFileInputs = () => {
-        document.querySelectorAll('input[type="file"]').forEach((el: any) => el.value = '')
-      }
+    }
 
-       const handleSendMessage = async () => {
-    if (!chatMessage.trim() || !currentUserId || !selectedContact) return
-    const { error } = await supabase
-      .from('messages')
-      .insert([{ sender_id: currentUserId, receiver_id: selectedContact.id, content: chatMessage.trim() }])
-    
-    if (!error) setChatMessage('')
-  }
+    const clearFileInputs = () => { document.querySelectorAll('input[type="file"]').forEach((el: any) => el.value = '') }
 
+    const handleSendMessage = async () => {
+        if (!chatMessage.trim() || !currentUserId || !selectedContact) return
+        const { error } = await supabase.from('messages').insert([{ sender_id: currentUserId, receiver_id: selectedContact.id, content: chatMessage.trim() }])
+        if (!error) setChatMessage('')
+    }
 
-  // ==========================================
+    // ==========================================
     // HANDLERS: KAMUS
     // ==========================================
     const resetFormKamus = () => {
@@ -470,43 +471,35 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     }
   
     // ==========================================
-  // HANDLERS: VIRTUAL KEYBOARD MULOK
-  // ==========================================
-  const insertSpecialChar = (char: string) => {
-    // Ambil elemen yang sedang aktif (ditekan/di-focus) oleh user
-    const activeEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement;
-    
-    // Pastikan elemen tersebut adalah Input text atau Textarea
-    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.type !== 'file') {
-      const start = activeEl.selectionStart || 0;
-      const end = activeEl.selectionEnd || 0;
-      const text = activeEl.value;
-      
-      const before = text.substring(0, start);
-      const after = text.substring(end, text.length);
+    // HANDLERS: VIRTUAL KEYBOARD MULOK
+    // ==========================================
+    const insertSpecialChar = (char: string) => {
+        const activeEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.type !== 'file') {
+        const start = activeEl.selectionStart || 0;
+        const end = activeEl.selectionEnd || 0;
+        const text = activeEl.value;
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
 
-      // Trik agar React mendeteksi perubahan value (karena kita memanipulasi DOM secara langsung)
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-      const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+        const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
 
-      if (activeEl.tagName === 'INPUT' && nativeInputValueSetter) {
-        nativeInputValueSetter.call(activeEl, before + char + after);
-      } else if (activeEl.tagName === 'TEXTAREA' && nativeTextAreaValueSetter) {
-        nativeTextAreaValueSetter.call(activeEl, before + char + after);
-      }
+        if (activeEl.tagName === 'INPUT' && nativeInputValueSetter) {
+            nativeInputValueSetter.call(activeEl, before + char + after);
+        } else if (activeEl.tagName === 'TEXTAREA' && nativeTextAreaValueSetter) {
+            nativeTextAreaValueSetter.call(activeEl, before + char + after);
+        }
 
-      // Picu event 'input' agar form React ter-update
-      activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-
-      // Kembalikan kursor tepat di sebelah kanan huruf yang baru saja dimasukkan
-      setTimeout(() => {
-        activeEl.selectionStart = activeEl.selectionEnd = start + char.length;
-        activeEl.focus();
-      }, 0);
-    } else {
-      alert("Silahkan tap/klik kolom inputan terlebih dahulu sebelum memasukkan huruf istimewa.");
-    }
-  };
+        activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+        setTimeout(() => {
+            activeEl.selectionStart = activeEl.selectionEnd = start + char.length;
+            activeEl.focus();
+        }, 0);
+        } else {
+        alert("Silahkan tap/klik kolom inputan terlebih dahulu sebelum memasukkan huruf istimewa.");
+        }
+    };
 
     // ==========================================
     // HANDLERS: SEJARAH
@@ -568,16 +561,13 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     }
   
     const handleSubmitTg = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setSubmitLoading(true);
+      e.preventDefault(); setSubmitLoading(true);
       try {
         let finalImageUrl = editingTgId ? tgList.find(i => String(i.id) === editingTgId)?.image_url : '';
-        
         if (tgImageFile) {
           const imageUrl = await uploadFile(tgImageFile, 'game-assets');
           if (imageUrl) finalImageUrl = imageUrl;
         }
-  
         if (!finalImageUrl) throw new Error("Gambar wajib diunggah!");
   
         const payload = {
@@ -602,23 +592,13 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
         
         alert('Soal Tebak Gambar Berhasil Disimpan!');
         resetFormTg(); fetchGames();
-      } catch (err: any) {
-        console.error("Supabase Error Data:", err);
-        alert(`Gagal menyimpan ke Database: ${err.message || 'Terjadi kesalahan tidak dikenal'}`);
-      } finally {
-        setSubmitLoading(false);
-      }
+      } catch (err: any) { alert(`Gagal menyimpan ke Database: ${err.message}`); } finally { setSubmitLoading(false); }
     };
   
     const handleSubmitTk = async (e: React.FormEvent) => {
       e.preventDefault(); setSubmitLoading(true);
       try {
-        const payload = {
-          ...tkForm,
-          clue_kalimat: tkForm.clue_kalimat || null,
-          arti_clue: tkForm.arti_clue || null
-        };
-  
+        const payload = { ...tkForm, clue_kalimat: tkForm.clue_kalimat || null, arti_clue: tkForm.arti_clue || null };
         if (editingTkId) {
           const { error } = await supabase.from('soal_tebak_kata').update(payload).eq('id', editingTkId);
           if (error) throw error;
@@ -626,7 +606,6 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
           const { error } = await supabase.from('soal_tebak_kata').insert([payload]);
           if (error) throw error;
         }
-        
         resetFormTk(); fetchGames(); alert('Soal Tebak Kata Berhasil Disimpan!');
       } catch (err: any) { alert(`Error Database: ${err.message}`) } finally { setSubmitLoading(false) }
     }
@@ -647,20 +626,13 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   
     // HANDLERS: TOKO / PRODUK
     const resetFormProduk = () => {
-      setEditingProdukId(null)
-      setProdukForm({ nama: '', deskripsi: '', harga: '', stok: '' })
-      setProdukImageFile(null)
-      clearFileInputs()
+      setEditingProdukId(null); setProdukForm({ nama: '', deskripsi: '', harga: '', stok: '' });
+      setProdukImageFile(null); clearFileInputs();
     }
   
     const handleEditProduk = (item: ProdukItem) => {
       setEditingProdukId(item.id)
-      setProdukForm({
-        nama: item.nama,
-        deskripsi: item.deskripsi || '',
-        harga: String(item.harga),
-        stok: String(item.stok)
-      })
+      setProdukForm({ nama: item.nama, deskripsi: item.deskripsi || '', harga: String(item.harga), stok: String(item.stok) })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   
@@ -670,20 +642,14 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
       setSubmitLoading(true)
       try {
         let finalImageUrl = editingProdukId ? produkList.find(p => p.id === editingProdukId)?.gambar_url : null
-        
         if (produkImageFile) {
           const uploadedUrl = await uploadFile(produkImageFile, 'produk-images')
           if (uploadedUrl) finalImageUrl = uploadedUrl
         }
-  
         const payload = {
-          nama: produkForm.nama,
-          deskripsi: produkForm.deskripsi || null,
-          harga: Number(produkForm.harga),
-          stok: Number(produkForm.stok),
-          gambar_url: finalImageUrl
+          nama: produkForm.nama, deskripsi: produkForm.deskripsi || null,
+          harga: Number(produkForm.harga), stok: Number(produkForm.stok), gambar_url: finalImageUrl
         }
-  
         if (editingProdukId) {
           const { error } = await supabase.from('produk').update(payload).eq('id', editingProdukId)
           if (error) throw error
@@ -693,53 +659,45 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
           if (error) throw error
           alert('Produk baru berhasil ditambahkan!')
         }
-  
-        resetFormProduk()
-        fetchProduk()
-      } catch (err: any) {
-        alert(`Gagal menyimpan produk: ${err.message}`)
-      } finally {
-        setSubmitLoading(false)
-      }
+        resetFormProduk(); fetchProduk();
+      } catch (err: any) { alert(`Gagal menyimpan produk: ${err.message}`) } finally { setSubmitLoading(false) }
     }
   
-    // HANDLERS: PESANAN (OPTIMIZED)
+    // HANDLERS: PESANAN
     const handleUpdateStatusPesanan = async (id: string, newStatus: PesananItem['status']) => {
       const isCancel = newStatus === 'dibatalkan';
-      const confirmMsg = isCancel 
-        ? 'Apakah Anda yakin ingin membatalkan pesanan ini? Aksi ini akan mengubah status menjadi dibatalkan.'
-        : `Apakah Anda yakin ingin mengubah status pesanan ini menjadi ${newStatus.toUpperCase()}?`;
-  
+      const confirmMsg = isCancel ? 'Apakah Anda yakin ingin membatalkan pesanan ini?' : `Ubah status menjadi ${newStatus.toUpperCase()}?`;
       if (!confirm(confirmMsg)) return;
-  
       try {
         const { error } = await supabase.from('pesanan').update({ status: newStatus }).eq('id', id)
         if (error) throw error
-        alert(isCancel ? 'Pesanan telah dibatalkan.' : `Status pesanan berhasil diubah menjadi ${newStatus}!`)
+        alert(isCancel ? 'Pesanan dibatalkan.' : `Status pesanan diubah ke ${newStatus}!`)
         fetchPesanan()
-      } catch (err: any) {
-        alert(`Gagal mengupdate status: ${err.message}`)
-      }
+      } catch (err: any) { alert(`Gagal mengupdate status: ${err.message}`) }
     }
   
-    // UPLOAD BUKTI TRANSFER OLEH ADMIN
     const handleUploadBuktiAdmin = async (orderId: string, file: File) => {
       setUploadingBuktiId(orderId)
       try {
         const buktiUrl = await uploadFile(file, 'bukti-transfer')
         if (!buktiUrl) throw new Error("Gagal memproses file gambar.")
-  
         const { error } = await supabase.from('pesanan').update({ bukti_transfer_url: buktiUrl }).eq('id', orderId)
         if (error) throw error
-        
-        alert('File Bukti Pembayaran berhasil diunggah & disimpan!')
-        fetchPesanan() // Muat ulang data pesanan
-      } catch (err: any) {
-        alert(`Terjadi kesalahan saat unggah: ${err.message}`)
-      } finally {
-        setUploadingBuktiId(null)
-      }
+        alert('File Bukti Pembayaran berhasil disimpan!')
+        fetchPesanan()
+      } catch (err: any) { alert(`Terjadi kesalahan: ${err.message}`) } finally { setUploadingBuktiId(null) }
     }
+
+    // HANDLER: MODERASI KOMENTAR (NEW)
+    const handleToggleKomentar = async (id: string, currentStatus: boolean) => {
+  try {
+    const { error } = await supabase.from('feedback').update({ is_published: !currentStatus }).eq('id', id);
+    if (error) throw error;
+    fetchKomentar();
+  } catch (err: any) {
+    alert(`Gagal update status komentar: ${err.message}`);
+  }
+};
   
     // GLOBAL DELETE HANDLER
     const handleDelete = async (table: string, id: string | number) => {
@@ -747,16 +705,14 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
         try {
           const { error } = await supabase.from(table).delete().eq('id', id);
           if (error) throw error;
-  
           if (table === 'kamus') fetchKamus()
           else if (table === 'sejarah') fetchSejarah()
           else if (table === 'produk') fetchProduk()
           else if (table === 'pesanan') fetchPesanan()
+          else if (table === 'feedback') fetchKomentar() // <-- Delete support untuk komentar
           else fetchGames()
           alert('Data berhasil dihapus!')
-        } catch (err: any) {
-          alert(`Gagal menghapus: ${err.message}`);
-        }
+        } catch (err: any) { alert(`Gagal menghapus: ${err.message}`); }
       }
     }
   
@@ -797,6 +753,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                 { id: 'games', icon: Gamepad2, label: 'Kelola Soal Game' },
                 { id: 'toko', icon: Package, label: 'Kelola Toko Store' },
                 { id: 'pesanan', icon: ClipboardList, label: 'Pesanan Masuk' },
+                { id: 'komentar', icon: MessageCircle, label: 'Moderasi Komentar' }, // <-- Tambah menu komentar
               ].map(menu => (
                 <button key={menu.id} onClick={() => { setActiveMenu(menu.id); setIsMobileMenuOpen(false) }} 
                   className={`flex items-center gap-3 w-full px-4 py-3.5 font-semibold text-[14px] rounded-xl text-left transition-all ${activeMenu === menu.id ? 'bg-[#005C43] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
@@ -817,7 +774,13 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
               <main className="flex-1 flex flex-col h-[calc(100vh-64px)] md:h-screen overflow-y-auto w-full">
                 <header className="bg-white border-b border-gray-100 px-6 md:px-10 py-5 md:py-6 sticky top-0 z-10 hidden md:block">
                   <h1 className="text-2xl font-bold text-gray-900 capitalize">
-                    {activeMenu === 'dashboard' ? 'Telemetry & Analytics' : activeMenu === 'kamus' ? 'Database Kosakata & Konteks' : activeMenu === 'games' ? 'Manajemen Soal Permainan' : activeMenu === 'sejarah' ? 'Manajemen Konten Sejarah' : activeMenu === 'toko' ? 'Kelola Katalog Produk' : 'Manajemen Logistik & Transaksi'}
+                    {activeMenu === 'dashboard' ? 'Telemetry & Analytics' : 
+                     activeMenu === 'kamus' ? 'Database Kosakata & Konteks' : 
+                     activeMenu === 'games' ? 'Manajemen Soal Permainan' : 
+                     activeMenu === 'sejarah' ? 'Manajemen Konten Sejarah' : 
+                     activeMenu === 'toko' ? 'Kelola Katalog Produk' : 
+                     activeMenu === 'komentar' ? 'Moderasi Diskusi & Komentar' :
+                     'Manajemen Logistik & Transaksi'}
                   </h1>
                 </header>
         
@@ -867,6 +830,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                   {/* TAB 2: KELOLA KAMUS ADVANCED */}
                   {activeMenu === 'kamus' && (
                     <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-6 items-start">
+                      {/* ... Form Kosakata ... */}
                       <form onSubmit={handleSubmitKamus} className="bg-white border border-gray-100 p-6 rounded-[24px] shadow-sm">
                         <div className="flex justify-between items-center mb-6 border-b pb-4">
                           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
@@ -876,37 +840,20 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                         </div>
 
                         {/* VIRTUAL KEYBOARD MULOK */}
-<div className="bg-[#EBF2EF] border border-[#005C43]/20 p-3 rounded-xl mb-6 flex flex-wrap gap-2 items-center sticky top-0 z-10 shadow-sm">
-  <span className="text-[11px] font-black text-[#005C43] uppercase tracking-wider mr-2">
-    Keyboard<br/>Mulok:
-  </span>
-  {['é', 'è', 'ê', 'ě', 'É', 'È', 'Ê', 'Ě'].map(char => (
-    <button
-      key={char}
-      type="button"
-      // PENTING: Gunakan onMouseDown dan preventDefault agar input tidak kehilangan fokus (blur) saat tombol ditekan
-      onMouseDown={(e) => {
-        e.preventDefault(); 
-        insertSpecialChar(char);
-      }}
-      className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-[#005C43]/30 rounded-lg shadow-sm hover:bg-[#005C43] hover:text-white font-bold text-sm md:text-base transition-all active:scale-95"
-    >
-      {char}
-    </button>
-  ))}
-  <div className="w-full sm:w-auto ml-auto mt-2 sm:mt-0">
-    <p className="text-[10px] text-gray-500 font-medium bg-white/50 px-2 py-1 rounded border border-gray-200">
-      💡 Klik form input, lalu klik huruf.
-    </p>
-  </div>
-</div>
+                        <div className="bg-[#EBF2EF] border border-[#005C43]/20 p-3 rounded-xl mb-6 flex flex-wrap gap-2 items-center sticky top-0 z-10 shadow-sm">
+                          <span className="text-[11px] font-black text-[#005C43] uppercase tracking-wider mr-2">Keyboard<br/>Mulok:</span>
+                          {['é', 'è', 'ê', 'ě', 'É', 'È', 'Ê', 'Ě'].map(char => (
+                            <button
+                              key={char} type="button"
+                              onMouseDown={(e) => { e.preventDefault(); insertSpecialChar(char); }}
+                              className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-[#005C43]/30 rounded-lg shadow-sm hover:bg-[#005C43] hover:text-white font-bold text-sm md:text-base transition-all active:scale-95"
+                            >{char}</button>
+                          ))}
+                          <div className="w-full sm:w-auto ml-auto mt-2 sm:mt-0"><p className="text-[10px] text-gray-500 font-medium bg-white/50 px-2 py-1 rounded border border-gray-200">💡 Klik form input, lalu klik huruf.</p></div>
+                        </div>
                         
                         <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
-                          <div>
-                            <label className="block text-xs font-black text-gray-900 uppercase mb-2">Arti Bahasa Indonesia *</label>
-                            <input type="text" required value={artiIndo} onChange={e => setArtiIndo(e.target.value)} placeholder="Contoh: Makan" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white font-bold" />
-                          </div>
-        
+                          <div><label className="block text-xs font-black text-gray-900 uppercase mb-2">Arti Bahasa Indonesia *</label><input type="text" required value={artiIndo} onChange={e => setArtiIndo(e.target.value)} placeholder="Contoh: Makan" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-[#005C43] focus:bg-white font-bold" /></div>
                           <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100/50 space-y-4">
                             <h3 className="text-xs font-black text-emerald-700 uppercase flex items-center gap-2"><span className="w-2 h-2 bg-emerald-500 rounded-full"></span> Tingkatan Halus (Alos)</h3>
                             <div className="grid grid-cols-2 gap-3">
@@ -957,13 +904,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                           <h2 className="text-lg font-black text-gray-900">Arsip Kosakata</h2>
                           <div className="relative w-1/2">
                             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                            <input 
-                              type="text" 
-                              placeholder="Cari..." 
-                              value={searchKamus} // <-- Tambahkan ini
-                              onChange={(e) => setSearchKamus(e.target.value)} // <-- Tambahkan ini
-                              className="pl-9 pr-4 py-2 w-full bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-[#005C43]" 
-                              />
+                            <input type="text" placeholder="Cari..." value={searchKamus} onChange={(e) => setSearchKamus(e.target.value)} className="pl-9 pr-4 py-2 w-full bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-[#005C43]" />
                           </div>
                         </div>
                         
@@ -978,11 +919,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                             <tbody>
                             {kamusList
                               .filter((item) => {
-                                // Ubah keyword pencarian ke huruf kecil agar case-insensitive
-                                // Pastikan lo udah bikin state: const [searchKamus, setSearchKamus] = useState('');
                                 const keyword = searchKamus.toLowerCase();
-
-                                // Return true jika keyword ada di arti_indonesia, kata_alos, kata_sedang, atau kata_kasar
                                 return (
                                   item.arti_indonesia?.toLowerCase().includes(keyword) ||
                                   item.kata_alos?.toLowerCase().includes(keyword) ||
@@ -995,40 +932,15 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                                   <td className="p-4">
                                     <p className="font-black text-gray-900 text-base mb-1.5">{item.arti_indonesia}</p>
                                     <div className="flex flex-col gap-1">
-                                      {item.kata_alos && (
-                                        <span className="font-bold text-emerald-700 text-xs">
-                                          <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded mr-2 uppercase">Alus</span>
-                                          {item.kata_alos}
-                                        </span>
-                                      )}
-                                      {item.kata_sedang && (
-                                        <span className="font-bold text-blue-700 text-xs">
-                                          <span className="text-[9px] bg-blue-100 text-blue-800 px-1 rounded mr-2 uppercase">Sdg</span>
-                                          {item.kata_sedang}
-                                        </span>
-                                      )}
-                                      {item.kata_kasar && (
-                                        <span className="font-bold text-red-700 text-xs">
-                                          <span className="text-[9px] bg-red-100 text-red-800 px-1 rounded mr-2 uppercase">Ksr</span>
-                                          {item.kata_kasar}
-                                        </span>
-                                      )}
+                                      {item.kata_alos && <span className="font-bold text-emerald-700 text-xs"><span className="text-[9px] bg-emerald-100 text-emerald-800 px-1 rounded mr-2 uppercase">Alus</span>{item.kata_alos}</span>}
+                                      {item.kata_sedang && <span className="font-bold text-blue-700 text-xs"><span className="text-[9px] bg-blue-100 text-blue-800 px-1 rounded mr-2 uppercase">Sdg</span>{item.kata_sedang}</span>}
+                                      {item.kata_kasar && <span className="font-bold text-red-700 text-xs"><span className="text-[9px] bg-red-100 text-red-800 px-1 rounded mr-2 uppercase">Ksr</span>{item.kata_kasar}</span>}
                                     </div>
                                   </td>
                                   <td className="p-4 text-right align-top pt-5">
                                     <div className="flex justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button 
-                                        onClick={() => handleEditClickKamus(item)} 
-                                        className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"
-                                      >
-                                        <Edit3 className="w-4 h-4" />
-                                      </button>
-                                      <button 
-                                        onClick={() => handleDelete('kamus', item.id)} 
-                                        className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
+                                      <button onClick={() => handleEditClickKamus(item)} className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"><Edit3 className="w-4 h-4" /></button>
+                                      <button onClick={() => handleDelete('kamus', item.id)} className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                                     </div>
                                   </td>
                                 </tr>
@@ -1049,30 +961,12 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                         <button onClick={() => setActiveGameTab('susun_kata')} className={`py-3 px-6 font-bold text-sm border-b-2 transition-colors ${activeGameTab === 'susun_kata' ? 'border-[#005C43] text-[#005C43]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}>Soal Susun Kata</button>
                       </div>
 
-                      {/* VIRTUAL KEYBOARD MULOK UNTUK GAME */}
-              <div className="bg-[#EBF2EF] border border-[#005C43]/20 p-3 rounded-xl flex flex-wrap gap-2 items-center sticky top-0 z-10 shadow-sm">
-                <span className="text-[11px] font-black text-[#005C43] uppercase tracking-wider mr-2">
-                  Keyboard<br/>Mulok:
-                </span>
-                {['é', 'è', 'ê', 'ě', 'É', 'È', 'Ê', 'Ě'].map(char => (
-                  <button
-                    key={char}
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault(); 
-                      insertSpecialChar(char);
-                    }}
-                    className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-[#005C43]/30 rounded-lg shadow-sm hover:bg-[#005C43] hover:text-white font-bold text-sm md:text-base transition-all active:scale-95"
-                  >
-                    {char}
-                  </button>
-                ))}
-                <div className="w-full sm:w-auto ml-auto mt-2 sm:mt-0">
-                  <p className="text-[10px] text-gray-500 font-medium bg-white/50 px-2 py-1 rounded border border-gray-200">
-                    💡 Klik form input, lalu klik huruf.
-                  </p>
-                </div>
-              </div>
+                      <div className="bg-[#EBF2EF] border border-[#005C43]/20 p-3 rounded-xl flex flex-wrap gap-2 items-center sticky top-0 z-10 shadow-sm">
+                        <span className="text-[11px] font-black text-[#005C43] uppercase tracking-wider mr-2">Keyboard<br/>Mulok:</span>
+                        {['é', 'è', 'ê', 'ě', 'É', 'È', 'Ê', 'Ě'].map(char => (
+                          <button key={char} type="button" onMouseDown={(e) => { e.preventDefault(); insertSpecialChar(char); }} className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center bg-white border border-[#005C43]/30 rounded-lg shadow-sm hover:bg-[#005C43] hover:text-white font-bold text-sm md:text-base transition-all active:scale-95">{char}</button>
+                        ))}
+                      </div>
         
                       {activeGameTab === 'tebak_gambar' && (
                         <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6 items-start">
@@ -1081,9 +975,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                             <div className="md:col-span-2">
                               <label className="text-xs font-bold text-gray-500 uppercase">Upload Gambar Soal *</label>
                               <input type="file" accept="image/*" onChange={(e) => setTgImageFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:bg-[#EBF2EF] file:text-[#005C43]" />
-                              {tgForm.image_url && !tgImageFile && (
-                                <img src={tgForm.image_url} alt="Preview" className="mt-2 h-32 rounded-xl object-cover border border-gray-200" />
-                              )}
+                              {tgForm.image_url && !tgImageFile && <img src={tgForm.image_url} alt="Preview" className="mt-2 h-32 rounded-xl object-cover border border-gray-200" />}
                             </div>
                             <div><label className="text-xs font-bold text-gray-500 uppercase">Pertanyaan *</label><input type="text" required value={tgForm.question} onChange={e => setTgForm({...tgForm, question: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none" /></div>
                             <div><label className="text-xs font-bold text-emerald-600 uppercase">Jawaban Benar (Kunci) *</label><input type="text" required value={tgForm.jawaban_benar} onChange={e => setTgForm({...tgForm, jawaban_benar: e.target.value})} className="w-full mt-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm focus:border-emerald-500 focus:outline-none" /></div>
@@ -1092,9 +984,9 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                               <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 2 *</label><input type="text" required value={tgForm.pengecoh_2} onChange={e => setTgForm({...tgForm, pengecoh_2: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                               <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 3 *</label><input type="text" required value={tgForm.pengecoh_3} onChange={e => setTgForm({...tgForm, pengecoh_3: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                             </div>
-                            <div><label className="text-xs font-bold text-amber-600 uppercase">Hint (Petunjuk) (Opsional)</label><input type="text" value={tgForm.hint} onChange={e => setTgForm({...tgForm, hint: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
-                            <div><label className="text-xs font-bold text-blue-600 uppercase">Penjelasan (Opsional)</label><textarea value={tgForm.explanation} onChange={e => setTgForm({...tgForm, explanation: e.target.value})} className="w-full mt-1 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm focus:border-blue-500 focus:outline-none h-16" /></div>
-                            <div><label className="text-xs font-bold text-purple-600 uppercase">Fakta Budaya (Opsional)</label><textarea value={tgForm.cultural_fact} onChange={e => setTgForm({...tgForm, cultural_fact: e.target.value})} className="w-full mt-1 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none h-16" /></div>
+                            <div><label className="text-xs font-bold text-amber-600 uppercase">Hint (Petunjuk)</label><input type="text" value={tgForm.hint} onChange={e => setTgForm({...tgForm, hint: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
+                            <div><label className="text-xs font-bold text-blue-600 uppercase">Penjelasan</label><textarea value={tgForm.explanation} onChange={e => setTgForm({...tgForm, explanation: e.target.value})} className="w-full mt-1 bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm focus:border-blue-500 focus:outline-none h-16" /></div>
+                            <div><label className="text-xs font-bold text-purple-600 uppercase">Fakta Budaya</label><textarea value={tgForm.cultural_fact} onChange={e => setTgForm({...tgForm, cultural_fact: e.target.value})} className="w-full mt-1 bg-purple-50 border border-purple-200 rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none h-16" /></div>
                             <div className="flex gap-3 mt-6">
                               {editingTgId && <button type="button" onClick={resetFormTg} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200">Batal</button>}
                               <button type="submit" disabled={submitLoading} className="flex-[2] bg-[#005C43] text-white py-3 rounded-xl font-bold shadow-[0_4px_0_#004733] hover:-translate-y-1 transition-transform">{submitLoading ? 'Menyimpan...' : 'Simpan Soal'}</button>
@@ -1132,8 +1024,8 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                               <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 2 *</label><input type="text" required value={tkForm.pengecoh_2} onChange={e => setTkForm({...tkForm, pengecoh_2: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                               <div><label className="text-xs font-bold text-red-500 uppercase">Pengecoh 3 *</label><input type="text" required value={tkForm.pengecoh_3} onChange={e => setTkForm({...tkForm, pengecoh_3: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-red-500 focus:outline-none" /></div>
                             </div>
-                            <div><label className="text-xs font-bold text-amber-600 uppercase">Clue Kalimat (Opsional)</label><input type="text" value={tkForm.clue_kalimat} onChange={e => setTkForm({...tkForm, clue_kalimat: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
-                            <div><label className="text-xs font-bold text-amber-600 uppercase">Arti Clue (Opsional)</label><input type="text" value={tkForm.arti_clue} onChange={e => setTkForm({...tkForm, arti_clue: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
+                            <div><label className="text-xs font-bold text-amber-600 uppercase">Clue Kalimat</label><input type="text" value={tkForm.clue_kalimat} onChange={e => setTkForm({...tkForm, clue_kalimat: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
+                            <div><label className="text-xs font-bold text-amber-600 uppercase">Arti Clue</label><input type="text" value={tkForm.arti_clue} onChange={e => setTkForm({...tkForm, arti_clue: e.target.value})} className="w-full mt-1 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:outline-none" /></div>
                             <div className="flex gap-3 mt-6">
                               {editingTkId && <button type="button" onClick={resetFormTk} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200">Batal</button>}
                               <button type="submit" disabled={submitLoading} className="flex-[2] bg-[#005C43] text-white py-3 rounded-xl font-bold shadow-[0_4px_0_#004733] hover:-translate-y-1 transition-transform">{submitLoading ? 'Menyimpan...' : 'Simpan Soal'}</button>
@@ -1161,8 +1053,8 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                          <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-6 items-start">
                          <form onSubmit={handleSubmitSk} className="bg-white border border-gray-100 p-6 rounded-[24px] shadow-sm space-y-4">
                            <h2 className="text-lg font-black text-gray-900 mb-4">{editingSkId ? 'Edit Soal Susun Kata' : 'Tambah Soal Susun Kata'}</h2>
-                           <div><label className="text-xs font-bold text-gray-500 uppercase">Clue Bahasa Indonesia (Soal) *</label><textarea required value={skForm.clue_indonesia} onChange={e => setSkForm({...skForm, clue_indonesia: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none h-20" /></div>
-                           <div><label className="text-xs font-bold text-emerald-600 uppercase">Target Kalimat Bawean (Benar) *</label><textarea required value={skForm.kalimat_benar} onChange={e => setSkForm({...skForm, kalimat_benar: e.target.value})} className="w-full mt-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm font-bold focus:border-emerald-500 focus:outline-none h-20" placeholder="Contoh: Eson terro ka Bawean" /></div>
+                           <div><label className="text-xs font-bold text-gray-500 uppercase">Clue B. Indonesia (Soal) *</label><textarea required value={skForm.clue_indonesia} onChange={e => setSkForm({...skForm, clue_indonesia: e.target.value})} className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none h-20" /></div>
+                           <div><label className="text-xs font-bold text-emerald-600 uppercase">Target Kalimat Bawean *</label><textarea required value={skForm.kalimat_benar} onChange={e => setSkForm({...skForm, kalimat_benar: e.target.value})} className="w-full mt-1 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm font-bold focus:border-emerald-500 focus:outline-none h-20" /></div>
                            <div className="flex gap-3 mt-6">
                              {editingSkId && <button type="button" onClick={resetFormSk} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200">Batal</button>}
                              <button type="submit" disabled={submitLoading} className="flex-[2] bg-[#005C43] text-white py-3 rounded-xl font-bold shadow-[0_4px_0_#004733] hover:-translate-y-1 transition-transform">{submitLoading ? 'Menyimpan...' : 'Simpan Soal'}</button>
@@ -1231,23 +1123,11 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                           {editingProdukId && <button type="button" onClick={resetFormProduk} className="text-xs font-bold text-gray-500 hover:text-gray-900 flex items-center gap-1 bg-gray-50 px-3 py-1.5 rounded-full"><X className="w-3 h-3" /> Batal</button>}
                         </div>
         
-                        <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase">Nama Produk *</label>
-                          <input type="text" required value={produkForm.nama} onChange={e => setProdukForm({...produkForm, nama: e.target.value})} placeholder="Contoh: Kaos Lentera Bawean v1" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-gray-500 uppercase">Deskripsi Produk</label>
-                          <textarea value={produkForm.deskripsi} onChange={e => setProdukForm({...produkForm, deskripsi: e.target.value})} placeholder="Spesifikasi bahan, ukuran, keunggulan produk..." className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white h-24 resize-none custom-scrollbar" />
-                        </div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Nama Produk *</label><input type="text" required value={produkForm.nama} onChange={e => setProdukForm({...produkForm, nama: e.target.value})} placeholder="Contoh: Kaos Lentera Bawean v1" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" /></div>
+                        <div><label className="text-xs font-bold text-gray-500 uppercase">Deskripsi Produk</label><textarea value={produkForm.deskripsi} onChange={e => setProdukForm({...produkForm, deskripsi: e.target.value})} placeholder="Spesifikasi bahan, ukuran..." className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white h-24 resize-none custom-scrollbar" /></div>
                         <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Harga (Rp) *</label>
-                            <input type="number" required value={produkForm.harga} onChange={e => setProdukForm({...produkForm, harga: e.target.value})} placeholder="125000" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase">Stok Gudang *</label>
-                            <input type="number" required value={produkForm.stok} onChange={e => setProdukForm({...produkForm, stok: e.target.value})} placeholder="50" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" />
-                          </div>
+                          <div><label className="text-xs font-bold text-gray-500 uppercase">Harga (Rp) *</label><input type="number" required value={produkForm.harga} onChange={e => setProdukForm({...produkForm, harga: e.target.value})} placeholder="125000" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" /></div>
+                          <div><label className="text-xs font-bold text-gray-500 uppercase">Stok Gudang *</label><input type="number" required value={produkForm.stok} onChange={e => setProdukForm({...produkForm, stok: e.target.value})} placeholder="50" className="w-full mt-1 bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-[#005C43] focus:outline-none focus:bg-white font-bold" /></div>
                         </div>
                         <div>
                           <label className="text-xs font-bold text-gray-500 uppercase">Foto File Produk</label>
@@ -1268,11 +1148,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                           {produkList.map(item => (
                             <div key={item.id} className="p-4 border border-gray-100 rounded-2xl bg-gray-50 flex flex-col justify-between group relative overflow-hidden">
                               <div className="flex gap-3">
-                                {item.gambar_url ? (
-                                  <img src={item.gambar_url} alt={item.nama} className="w-20 h-20 object-cover rounded-xl border shrink-0 bg-white" />
-                                ) : (
-                                  <div className="w-20 h-20 rounded-xl bg-gray-200 flex items-center justify-center shrink-0"><Package className="w-8 h-8 text-gray-400" /></div>
-                                )}
+                                {item.gambar_url ? (<img src={item.gambar_url} alt={item.nama} className="w-20 h-20 object-cover rounded-xl border shrink-0 bg-white" />) : (<div className="w-20 h-20 rounded-xl bg-gray-200 flex items-center justify-center shrink-0"><Package className="w-8 h-8 text-gray-400" /></div>)}
                                 <div className="overflow-hidden">
                                   <h4 className="font-bold text-gray-900 text-sm truncate">{item.nama}</h4>
                                   <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.deskripsi || 'Tidak ada deskripsi.'}</p>
@@ -1280,9 +1156,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                                 </div>
                               </div>
                               <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200/60">
-                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${item.stok > 10 ? 'bg-emerald-100 text-emerald-800' : item.stok > 0 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>
-                                  Stok: {item.stok} Pcs
-                                </span>
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${item.stok > 10 ? 'bg-emerald-100 text-emerald-800' : item.stok > 0 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'}`}>Stok: {item.stok} Pcs</span>
                                 <div className="flex gap-1.5">
                                   <button onClick={() => handleEditProduk(item)} className="p-2 bg-white border text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
                                   <button onClick={() => handleDelete('produk', item.id)} className="p-2 bg-white border text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -1290,19 +1164,15 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                               </div>
                             </div>
                           ))}
-                          {produkList.length === 0 && (
-                            <p className="col-span-2 text-center text-gray-400 text-sm py-8 font-medium">Belum ada produk yang dimasukkan ke katalog.</p>
-                          )}
+                          {produkList.length === 0 && <p className="col-span-2 text-center text-gray-400 text-sm py-8 font-medium">Belum ada produk.</p>}
                         </div>
                       </div>
                     </div>
                   )}
         
-                  {/* TAB 6: MANAJEMEN PESANAN / COMMERCE LOGISTICS (MAXIMIZED) */}
+                  {/* TAB 6: MANAJEMEN PESANAN / COMMERCE LOGISTICS */}
                   {activeMenu === 'pesanan' && (() => {
-                    const displayedPesanan = filterPesanan === 'Semua' 
-                      ? pesananList 
-                      : pesananList.filter(p => p.status === filterPesanan);
+                    const displayedPesanan = filterPesanan === 'Semua' ? pesananList : pesananList.filter(p => p.status === filterPesanan);
         
                     return (
                       <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 overflow-hidden flex flex-col max-h-[80vh]">
@@ -1313,15 +1183,7 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                           </div>
                           <div className="flex gap-2 bg-gray-50 p-1 border rounded-xl w-full sm:w-auto overflow-x-auto custom-scrollbar">
                             {['Semua', 'pending', 'diproses', 'dikirim', 'selesai', 'dibatalkan'].map(st => (
-                              <button 
-                                key={st} 
-                                onClick={() => setFilterPesanan(st)}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize shrink-0 transition-colors ${
-                                  filterPesanan === st ? 'bg-[#005C43] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                                }`}
-                              >
-                                {st}
-                              </button>
+                              <button key={st} onClick={() => setFilterPesanan(st)} className={`px-3 py-1.5 text-xs font-bold rounded-lg capitalize shrink-0 transition-colors ${filterPesanan === st ? 'bg-[#005C43] text-white shadow-sm' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}>{st}</button>
                             ))}
                           </div>
                         </div>
@@ -1331,7 +1193,6 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                             {displayedPesanan.map((order) => (
                               <div key={order.id} className={`p-5 border rounded-2xl flex flex-col lg:flex-row justify-between gap-6 hover:shadow-sm transition-all ${order.status === 'dibatalkan' ? 'bg-gray-100/50 border-gray-200 opacity-80' : 'bg-gray-50/50 border-gray-100 hover:border-gray-200'}`}>
                                 
-                                {/* Left Block: Buyer and Items data */}
                                 <div className="space-y-3 flex-1">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-xs font-black text-gray-400">ID: #{order.id.slice(0,8).toUpperCase()}</span>
@@ -1342,33 +1203,19 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                                       order.status === 'dikirim' ? 'bg-purple-100 text-purple-800' :
                                       order.status === 'selesai' ? 'bg-emerald-100 text-emerald-800' : 
                                       'bg-gray-200 text-gray-700'
-                                    }`}>
-                                      {order.status}
-                                    </span>
+                                    }`}>{order.status}</span>
                                   </div>
                                   
                                   <div>
                                     <h4 className="font-black text-gray-900 text-base">{order.nama_pembeli} <span className="text-xs font-normal text-gray-500">({order.email_pembeli})</span></h4>
                                     <p className="text-xs font-semibold text-gray-600 mt-1 flex items-center flex-wrap gap-2">
                                       <span>📍 Alamat Kirim: <span className="font-normal text-gray-500">{order.alamat_kirim}</span></span>
-                                      <button 
-                                        onClick={() => { navigator.clipboard.writeText(order.alamat_kirim); alert('Alamat berhasil disalin!'); }} 
-                                        className="text-[10px] bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold hover:bg-gray-300"
-                                      >
-                                        📋 Salin
-                                      </button>
+                                      <button onClick={() => { navigator.clipboard.writeText(order.alamat_kirim); alert('Alamat berhasil disalin!'); }} className="text-[10px] bg-gray-200 text-gray-700 px-2 py-1 rounded font-bold hover:bg-gray-300">📋 Salin</button>
                                     </p>
                                     {order.telepon && (
                                       <p className="text-xs font-semibold text-gray-600 mt-1 flex items-center gap-2">
                                         📞 Telepon: <span className="font-normal text-gray-500">{order.telepon}</span>
-                                        <a 
-                                          href={`https://wa.me/${order.telepon.replace(/^0/, '62')}`} 
-                                          target="_blank" 
-                                          rel="noreferrer"
-                                          className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200 inline-flex items-center gap-1"
-                                        >
-                                          💬 Hub WA
-                                        </a>
+                                        <a href={`https://wa.me/${order.telepon.replace(/^0/, '62')}`} target="_blank" rel="noreferrer" className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200 inline-flex items-center gap-1">💬 Hub WA</a>
                                       </p>
                                     )}
                                   </div>
@@ -1379,7 +1226,6 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
                                   </div>
                                 </div>
         
-                                {/* Right Block: Payment Proof & Actions */}
                                 <div className="flex flex-row sm:flex-col justify-between lg:justify-center items-end gap-4 shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0 border-gray-200">
                                   <div className="text-left sm:text-right">
                                     <p className="text-xs text-gray-500 font-bold uppercase">Total Tagihan:</p>
@@ -1388,165 +1234,111 @@ const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
         
                                   <div className="flex flex-col gap-2 w-full sm:w-auto">
                                     {order.bukti_transfer_url ? (
-                                      <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="text-xs font-bold bg-blue-50 text-blue-700 px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-100 text-center flex items-center justify-center gap-2">
-                                        <FileText className="w-4 h-4" /> Lihat Bukti TF
+                                      <a href={order.bukti_transfer_url} target="_blank" rel="noreferrer" className="text-xs font-bold bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-center border border-blue-100 hover:bg-blue-100">
+                                        Lihat Bukti Transfer
                                       </a>
                                     ) : (
-                                      <div className="flex flex-col gap-1 w-full relative group">
-                                        <label className="text-xs font-bold bg-amber-50 text-amber-700 px-4 py-2 rounded-lg border border-amber-200 hover:bg-amber-100 text-center cursor-pointer flex items-center justify-center gap-2 transition-all">
-                                          {uploadingBuktiId === order.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UploadCloud className="w-4 h-4" /> Admin Upload TF</>}
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            disabled={uploadingBuktiId === order.id}
-                                            onChange={(e) => {
-                                              if (e.target.files && e.target.files[0]) {
-                                                handleUploadBuktiAdmin(order.id, e.target.files[0]);
-                                              }
-                                            }}
-                                          />
-                                        </label>
-                                        <span className="text-[9px] text-amber-600 text-center font-medium absolute -bottom-4 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Upload manual (opsional)</span>
-                                      </div>
+                                      <span className="text-xs text-gray-400 font-semibold italic text-center py-2">
+                                        Belum ada bukti
+                                      </span>
                                     )}
-        
-                                    {order.status !== 'dibatalkan' && order.status !== 'selesai' && (
-                                      <div className="flex flex-col gap-1 mt-1">
-                                        {order.status === 'pending' && <button onClick={() => handleUpdateStatusPesanan(order.id, 'diproses')} className="text-xs font-bold bg-[#005C43] text-white px-4 py-2 rounded-lg hover:-translate-y-0.5 transition-transform shadow-sm flex items-center justify-center gap-1"><Check className="w-3.5 h-3.5" /> Konfirmasi Bayar</button>}
-                                        {order.status === 'diproses' && <button onClick={() => handleUpdateStatusPesanan(order.id, 'dikirim')} className="text-xs font-bold bg-purple-600 text-white px-4 py-2 rounded-lg hover:-translate-y-0.5 transition-transform shadow-sm flex items-center justify-center gap-1"><Package className="w-3.5 h-3.5" /> Kirim Barang</button>}
-                                        {order.status === 'dikirim' && <button onClick={() => handleUpdateStatusPesanan(order.id, 'selesai')} className="text-xs font-bold bg-emerald-600 text-white px-4 py-2 rounded-lg hover:-translate-y-0.5 transition-transform shadow-sm flex items-center justify-center gap-1"><Check className="w-3.5 h-3.5" /> Selesaikan</button>}
-        
-                                        <button onClick={() => handleUpdateStatusPesanan(order.id, 'dibatalkan')} className="text-xs font-bold bg-red-50 text-red-600 px-4 py-1.5 rounded-lg border border-red-100 hover:bg-red-100 mt-1 transition-colors">Batal</button>
-                                      </div>
-                                    )}
-        
-                                    {(order.status === 'dibatalkan' || order.status === 'selesai') && (
-                                      <button onClick={() => handleDelete('pesanan', order.id)} className="text-xs font-bold bg-red-50 text-red-600 px-4 py-2 rounded-lg border border-red-100 hover:bg-red-100 flex items-center justify-center gap-1 transition-colors mt-1">
-                                        <Trash2 className="w-3.5 h-3.5" /> Hapus Arsip
-                                      </button>
-                                    )}
+                                    
+                                    {/* Action Dropdown Update Status */}
+                                    <select 
+                                      value={order.status}
+                                      onChange={(e) => handleUpdateStatusPesanan(order.id, e.target.value as any)}
+                                      className="text-xs font-bold border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#005C43]"
+                                    >
+                                      <option value="pending">Set Pending</option>
+                                      <option value="diproses">Set Diproses</option>
+                                      <option value="dikirim">Set Dikirim</option>
+                                      <option value="selesai">Set Selesai</option>
+                                      <option value="dibatalkan">Batalkan Pesanan</option>
+                                    </select>
                                   </div>
                                 </div>
                               </div>
                             ))}
                             {displayedPesanan.length === 0 && (
-                              <div className="text-center py-10">
-                                <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-sm font-medium text-gray-500">Tidak ada pesanan dengan status "{filterPesanan}".</p>
-                              </div>
+                              <div className="text-center py-10 text-gray-400 text-sm font-medium">Belum ada pesanan di status ini.</div>
                             )}
                           </div>
                         </div>
                       </div>
                     );
                   })()}
-        
+
+                  {/* TAB 7: MODERASI KOMENTAR (FITUR BARU) */}
+                  {activeMenu === 'komentar' && (
+                    <div className="bg-white border border-gray-100 rounded-[24px] shadow-sm p-6 flex flex-col max-h-[80vh]">
+                      <div className="flex justify-between items-center mb-6 border-b pb-4">
+                        <div>
+                          <h2 className="text-xl font-black text-gray-900">Moderasi Komentar</h2>
+                          <p className="text-xs text-gray-500 mt-1">Review, izinkan, atau hapus komentar masuk dari publik (Anti-Spam & XSS protection).</p>
+                        </div>
+                        <div className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-xs font-bold border border-amber-200 flex items-center gap-2">
+                           <AlertCircle className="w-4 h-4" />
+                           {komentarList.filter(k => !k.is_published).length} Menunggu Approval
+                        </div>
+                      </div>
+
+                      <div className="overflow-y-auto custom-scrollbar flex-1">
+                        <div className="space-y-4 pr-2">
+                          {komentarList.length === 0 ? (
+                            <p className="text-center text-gray-400 py-10 text-sm font-medium">Belum ada komentar sama sekali.</p>
+                          ) : (
+                            komentarList.map((item) => (
+                              <div key={item.id} className={`p-4 border rounded-2xl flex flex-col md:flex-row gap-4 justify-between transition-all ${item.is_published ? 'bg-white border-gray-200' : 'bg-amber-50/50 border-amber-100'}`}>
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
+                                    {item.email && <span className="text-xs text-gray-400">({item.email})</span>}
+                                    <span className="text-[10px] text-gray-400 font-medium">
+                                      • {new Date(item.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* RENDER RATING BINTANG */}
+                                  <div className="flex items-center gap-1 my-1">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star 
+                                        key={i} 
+                                        className={`w-4 h-4 ${i < (item.rating || 0) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200'}`} 
+                                      />
+                                    ))}
+                                  </div>
+
+                                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100 whitespace-pre-line">{item.message}</p>
+                                </div>
+                                
+                                <div className="flex md:flex-col gap-2 shrink-0 items-end justify-center md:border-l md:border-gray-100 md:pl-4 mt-2 md:mt-0 border-t md:border-t-0 pt-3 md:pt-0">
+                                  <button
+                                    onClick={() => handleToggleKomentar(item.id, item.is_published)}
+                                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors w-full md:w-auto ${
+                                      item.is_published 
+                                        ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' 
+                                        : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200'
+                                    }`}
+                                  >
+                                    {item.is_published ? <><EyeOff className="w-4 h-4"/> Sembunyikan</> : <><Check className="w-4 h-4"/> Publikasikan</>}
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleDelete('feedback', item.id)} // <- Harus dipanggil dengan 'feedback'
+                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 transition-colors w-full md:w-auto"
+                                  >
+                                    <Trash2 className="w-4 h-4" /> Hapus Data
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </main>
-        {/* ==========================================
-          FLOATING REAL-TIME CHAT WIDGET INTERACTION
-         ========================================== */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
-        <button 
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className="relative w-13 h-13 bg-[#005C43] text-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
-        >
-          {isChatOpen ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
-          
-          {/* BADGE NOTIFIKASI */}
-          {!isChatOpen && unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-pulse">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-
-        {isChatOpen && (
-          <div className="w-76 h-[400px] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden mt-2.5 animate-in fade-in slide-in-from-bottom-3 duration-200">
-            <div className="p-4 bg-[#005C43] text-white flex items-center shadow-xs shrink-0 gap-2">
-              {selectedContact && (
-                <button onClick={() => setSelectedContact(null)} className="hover:bg-[#004733] px-1.5 py-0.5 rounded font-bold text-xs">
-                  ←
-                </button>
-              )}
-              <div>
-                <h4 className="font-bold text-xs uppercase tracking-wider">
-                  {selectedContact ? selectedContact.nama : "Lentera Comm Room"}
-                </h4>
-                <p className="text-[10px] text-emerald-200">
-                  {selectedContact ? `Role: ${selectedContact.role}` : "Hubungi Admin/Teknisi Lain"}
-                </p>
-              </div>
-            </div>
-
-            {!selectedContact ? (
-              <div className="flex-1 overflow-y-auto p-2 bg-gray-50 flex flex-col gap-1">
-                <p className="text-[10px] text-gray-400 font-bold p-1.5 uppercase tracking-wider">Daftar Tim Aktif:</p>
-                {contacts.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 text-center py-6">Tidak ada admin lain saat ini.</p>
-                ) : (
-                  contacts.map((contact) => (
-                    <button
-                      key={contact.id}
-                      onClick={() => setSelectedContact(contact)}
-                      className="flex items-center gap-2.5 p-2.5 bg-white rounded-xl hover:bg-emerald-50/50 border border-gray-100 text-left transition-all w-full shadow-xs"
-                    >
-                      <div className="w-7 h-7 rounded-full bg-emerald-800 text-white flex items-center justify-center text-xs font-black shrink-0">
-                        {contact.nama.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-800 truncate">{contact.nama}</p>
-                        <span className="text-[9px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.2 rounded uppercase">{contact.role}</span>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 bg-gray-50">
-                  {messages.length === 0 && (
-                    <p className="text-[11px] text-gray-400 text-center py-6">Ruang obrolan baru dimulai.</p>
-                  )}
-                  {messages.map((msg) => {
-                    const isMe = msg.sender_id === currentUserId
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`p-2.5 rounded-xl text-xs max-w-[80%] border ${
-                          isMe
-                            ? "bg-[#EBF2EF] rounded-tr-none text-[#005C43] self-end border-[#005C43]/20"
-                            : "bg-white rounded-tl-none text-gray-700 self-start border-gray-100"
-                        }`}
-                      >
-                        {msg.content}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div className="p-2.5 bg-white border-t border-gray-100 flex gap-1.5 shrink-0">
-                  <input
-                    type="text"
-                    placeholder="Tulis pesan admin..."
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendMessage() } }}
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-[#005C43] focus:bg-white"
-                  />
-                  <button 
-                    onClick={handleSendMessage}
-                    className="p-2 bg-[#005C43] text-white rounded-xl hover:bg-[#004733] transition-colors shrink-0 flex items-center justify-center"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
       </div>
-
-    </div>
-    ) }
+    )
+}
