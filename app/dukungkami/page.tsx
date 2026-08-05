@@ -452,48 +452,48 @@ const ValueSection = () => {
 // 5. COMPONENT: Footer
 // ==========================================
 const Footer = () => (
-  <footer className="w-full bg-white py-16 px-8 border-t border-gray-100">
+  <footer className="w-full bg-[#EAF2ED] py-12 px-8">
     <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-        <div className="flex flex-col md:col-span-1">
-          <div className="flex items-center gap-2 mb-6">
-            <Image src="/logo.png" alt="Lentera Abhesa" width={160} height={80} priority />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2 mb-4">
+            <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
           </div>
-          <p className="text-sm text-gray-500 font-medium leading-relaxed">
-            Platform digital untuk melestarikan bahasa dan sastra Bawean.
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Platform digital untuk melestarikan bahasa dan sastra Bawean
           </p>
         </div>
+
         <div className="flex flex-col">
-          <h4 className="font-bold text-gray-900 text-base mb-4 uppercase tracking-wider text-xs">Navigasi</h4>
-          <ul className="space-y-3 text-sm font-semibold text-gray-500 flex flex-col">
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
+          <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
             <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
             <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
             <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
-            <li><Link href="/game" className="hover:text-[#005C43] transition-colors flex items-center gap-1">Game 🚀</Link></li>
+            <li><Link href="/facebookgame" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
           </ul>
         </div>
+
         <div className="flex flex-col">
-          <h4 className="font-bold text-gray-900 text-base mb-4 uppercase tracking-wider text-xs">Media Sosial</h4>
-          <ul className="space-y-3 text-sm font-semibold text-gray-500">
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
             <li><a href="https://www.instagram.com/lentera.abhesa?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">YouTube</a></li>
+            <li><a href="https://www.facebook.com/share/1LtwHxumjB/?mibextid=wwXIfr" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+            <li><a href="https://x.com/Lenteraabhesa" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
           </ul>
         </div>
+
         <div className="flex flex-col">
-          <h4 className="font-bold text-gray-900 text-base mb-4 uppercase tracking-wider text-xs">Kontak</h4>
-          <ul className="space-y-3 text-sm font-semibold text-gray-500">
-            <li><a href="mailto:lenteraabhesa@gmail.com" className="hover:text-[#005C43] transition-colors">hello@lenteraabhesa.com</a></li>
-            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">+62 812 3456 7890</a></li>
+          <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li><a href="mailto:lenteraabhesa@gmail.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">Phone</a></li>
           </ul>
         </div>
       </div>
-      <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-sm font-semibold text-gray-400">© 2026 Lentera Abhesa. All rights reserved.</p>
-        <div className="flex gap-4">
-          <Link href="#" className="text-sm font-semibold text-gray-400 hover:text-gray-600">Privacy Policy</Link>
-          <Link href="#" className="text-sm font-semibold text-gray-400 hover:text-gray-600">Terms of Service</Link>
-        </div>
+
+      <div className="border-t border-gray-300 pt-6 text-center">
+        <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
       </div>
     </div>
   </footer>

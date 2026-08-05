@@ -443,7 +443,7 @@ const Footer = () => (
             <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
             <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
             <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
-            <li><Link href="/game" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
+            <li><Link href="/facebookgame" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
           </ul>
         </div>
 
@@ -451,8 +451,8 @@ const Footer = () => (
           <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
           <ul className="space-y-2 text-sm text-gray-700">
             <li><a href="https://www.instagram.com/lentera.abhesa?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
-            <li><a href="#" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
+            <li><a href="https://www.facebook.com/share/1LtwHxumjB/?mibextid=wwXIfr" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+            <li><a href="https://x.com/Lenteraabhesa" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
           </ul>
         </div>
 
