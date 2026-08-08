@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Heart, Check, Loader2, X, Trophy, RotateCcw } from 'lucide-react'
+import { Heart, Check, Loader2, X, Trophy, RotateCcw, Phone, MessageCircle } from 'lucide-react'
 import Image from "next/image"
 import { supabase } from '@/lib/supabase'
 
@@ -114,53 +114,138 @@ const Navbar = () => {
     </nav>
   )
 }
-const Footer = () => (
-  <footer className="w-full bg-[#EAF2ED] py-12 px-8">
-    <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
+
+// 6. COMPONENT: Footer
+const Footer = () => {
+  const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false)
+
+  const adminContacts = [
+    {
+      name: "Admin 1 (Lentera Abhesa)",
+      number: "+62 812-1744-7473",
+      waLink: "https://wa.me/6281217447473?text=Halo%20Admin%201%20Lentera%20Abhesa,%20saya%20ingin%20bertanya...",
+    },
+    {
+      name: "Admin 2 (Lentera Abhesa)",
+      number: "+62 851-5852-4995",
+      waLink: "https://wa.me/6285158524995?text=Halo%20Admin%202%20Lentera%20Abhesa,%20saya%20ingin%20bertanya...",
+    }
+  ]
+
+  return (
+    <>
+      <footer className="w-full bg-[#EAF2ED] py-12 px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <Image src="/logo.png" alt="Lentera Abhesa" width={180} height={100} priority />
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                Platform digital untuk melestarikan bahasa dan sastra Bawean
+              </p>
+            </div>
+
+            <div className="flex flex-col">
+              <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
+              <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
+                <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
+                <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
+                <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
+                <li><Link href="/facebookgame" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col">
+              <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li><a href="https://www.instagram.com/lentera.abhesa?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
+                <li><a href="https://www.facebook.com/share/1LtwHxumjB/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
+                <li><a href="https://x.com/Lenteraabhesa" target="_blank" rel="noopener noreferrer" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col">
+              <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li><a href="mailto:lenteraabhesa@gmail.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
+                <li>
+                  {/* Diganti jadi Button supaya buka Modal Pop-up */}
+                  <button 
+                    onClick={() => setIsPhoneModalOpen(true)} 
+                    className="hover:text-[#005C43] transition-colors text-left cursor-pointer"
+                  >
+                    Phone
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            Platform digital untuk melestarikan bahasa dan sastra Bawean
-          </p>
-        </div>
 
-        <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Navigasi</h4>
-          <ul className="space-y-2 text-sm text-gray-700 flex flex-col">
-            <li><Link href="/" className="hover:text-[#005C43] transition-colors">Beranda</Link></li>
-            <li><Link href="/kamus" className="hover:text-[#005C43] transition-colors">Kamus</Link></li>
-            <li><Link href="/sejarah" className="hover:text-[#005C43] transition-colors">Sejarah</Link></li>
-            <li><Link href="/facebookgame" className="hover:text-[#005C43] transition-colors">Game🚀</Link></li>
-          </ul>
+          <div className="border-t border-gray-300 pt-6 text-center">
+            <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
+          </div>
         </div>
+      </footer>
 
-        <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Media Sosial</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="https://www.instagram.com/lentera.abhesa?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" className="hover:text-[#005C43] transition-colors">Instagram</a></li>
-            <li><a href="https://www.facebook.com/share/1LtwHxumjB/?mibextid=wwXIfr" className="hover:text-[#005C43] transition-colors">Facebook</a></li>
-            <li><a href="https://x.com/Lenteraabhesa" className="hover:text-[#005C43] transition-colors">Twitter</a></li>
-          </ul>
+      {/* ================= MODAL POP-UP PILIH ADMIN ================= */}
+      {isPhoneModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative border border-gray-100">
+            {/* Tombol Close */}
+            <button
+              onClick={() => setIsPhoneModalOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Header Modal */}
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-[#EAF2ED] flex items-center justify-center text-[#005C43]">
+                <Phone size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-[#005C43]">Hubungi Admin</h3>
+                <p className="text-xs text-gray-500">Pilih salah satu nomor admin di bawah</p>
+              </div>
+            </div>
+
+            {/* List Pilihan Admin */}
+            <div className="mt-5 space-y-3">
+              {adminContacts.map((admin, idx) => (
+                <a
+                  key={idx}
+                  href={admin.waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 rounded-2xl border border-gray-200 hover:border-[#005C43] hover:bg-[#F4F9F6] transition-all group"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-gray-500 group-hover:text-[#005C43]">
+                      {admin.name}
+                    </span>
+                    <span className="text-sm font-bold text-gray-800 mt-0.5">
+                      {admin.number}
+                    </span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-[#005C43] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <MessageCircle size={16} />
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            {/* Footer Modal */}
+            <p className="text-[11px] text-gray-400 text-center mt-5">
+              Klik kotak untuk membuka obrolan via WhatsApp
+            </p>
+          </div>
         </div>
-
-        <div className="flex flex-col">
-          <h4 className="font-bold text-[#005C43] text-base mb-3">Kontak</h4>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li><a href="mailto:lenteraabhesa@gmail.com" className="hover:text-[#005C43] transition-colors">Email</a></li>
-            <li><a href="tel:+62000000000" className="hover:text-[#005C43] transition-colors">Phone</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-300 pt-6 text-center">
-        <p className="text-sm text-gray-700">© 2026 Lentera Abhesa. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
-)
+      )}
+    </>
+  )
+}
 
 export default function SusunKataPage() {
   const [dataset, setDataset] = useState<ScrambleGameFormat[]>([])
