@@ -8,8 +8,8 @@ import { usePathname } from 'next/navigation';
 
 // 1. COMPONENT: Navbar
 const Navbar = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const pathname = usePathname()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const menuItems = [
     { name: 'Beranda', path: '/' },
@@ -17,7 +17,7 @@ const Navbar = () => {
     { name: 'Sejarah', path: '/sejarah' },
     { name: 'Game🚀', path: '/game' },
     { name: 'Tentang Kami', path: '/tentang-kami' },
-  ]
+  ];
 
   return (
     <nav className="w-full bg-white sticky top-0 z-50">
@@ -31,7 +31,7 @@ const Navbar = () => {
 
         <div className="hidden md:flex gap-6">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = pathname === item.path;
             return (
               <Link
                 key={item.name}
@@ -42,7 +42,7 @@ const Navbar = () => {
               >
                 {item.name}
               </Link>
-            )
+            );
           })}
         </div>
 
@@ -61,7 +61,7 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 p-6 flex flex-col gap-4 animate-in slide-in-from-top-4">
           {menuItems.map((item) => {
-            const isActive = pathname === item.path
+            const isActive = pathname === item.path;
             return (
               <Link
                 key={item.name}
@@ -73,7 +73,7 @@ const Navbar = () => {
               >
                 {item.name}
               </Link>
-            )
+            );
           })}
           <Link
             href="/dukungkami"
@@ -84,8 +84,8 @@ const Navbar = () => {
         </div>
       )}
     </nav>
-  )
-}
+  );
+};
 
 // 2. COMPONENT: ChatInterface
 interface Message {
@@ -131,18 +131,17 @@ export default function ChatInterface() {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
-    const userText = inputValue.trim();
-    
+    const userText = inputValue;
+    setInputValue('');
+    setIsLoading(true);
+
     const newUserMsg: Message = {
       id: Date.now().toString(),
       text: userText,
       sender: 'user',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    
     setMessages((prev) => [...prev, newUserMsg]);
-    setInputValue('');
-    setIsLoading(true);
 
     try {
       const response = await fetch('/api/lentera', {
@@ -151,23 +150,25 @@ export default function ChatInterface() {
         body: JSON.stringify({ message: userText }),
       });
 
-      if (!response.ok) throw new Error('Gagal memuat balasan');
-      
       const data = await response.json();
-      
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Terjadi kesalahan pada server.');
+      }
+
       const newBotMsg: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.reply || "Maaf, tidak ada balasan dari server.", 
+        text: data.reply || "Maaf, tidak ada balasan dari server.",
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
-      
+
       setMessages((prev) => [...prev, newBotMsg]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching AI response:", error);
       setMessages((prev) => [...prev, {
         id: Date.now().toString(),
-        text: 'Waduh, koneksi ke server lagi bermasalah nih. Coba periksa file route API lo ya!',
+        text: `Error: ${error.message}`,
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
@@ -179,11 +180,10 @@ export default function ChatInterface() {
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-[#EAF2ED] via-white to-[#EAF2ED] font-sans flex flex-col">
       
-      {/* Navbar di-inject di sini biar menyatu sama halaman */}
+      {/* Navbar */}
       <Navbar />
       
-      {/* Main Chat Layout - Responsive sizing */}
-      {/* Desktop: dikasih padding biar melayang. Mobile: mepet ke pinggir layar biar lega */}
+      {/* Main Chat Layout */}
       <div className="flex-1 w-full max-w-5xl mx-auto flex flex-col md:p-6 lg:p-8 h-[calc(100dvh-70px)] md:h-[calc(100vh-80px)]">
         
         {/* Chat Container */}
